@@ -26,7 +26,6 @@ raman/
     └── raman_spectra_api_compounds.csv
 ```
 
-Несмотря на имя файла, ноутбук содержит оба спринта.
 
 ## Запуск
 
@@ -53,7 +52,7 @@ python -m pip install numpy pandas scipy matplotlib seaborn openpyxl jupyterlab
 python -m jupyterlab
 ```
 
-Откройте `Lab01_sprint1_Raman.ipynb` и выполните все ячейки
+Откройте `Lab01_Raman.ipynb` и выполните все ячейки
 сверху вниз. Рабочая папка ядра должна быть `raman`,
 чтобы относительный путь `data/raman_spectra_api_compounds.csv`
 указывал на исходные данные.
