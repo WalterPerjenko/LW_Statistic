@@ -1,0 +1,2744 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>AqSolDB · Полный отчёт</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header><nav aria-label="Навигация по отчёту">
+        <a href="index.html">Обзор исследования</a>
+        <a href="#lab01-data">Спринт 1</a>
+        <a href="#lab02-sprint">Спринт 2</a>
+        <a href="#lab01-criteria">Критерии КТвД</a>
+    </nav></header>
+<div class="report-layout">
+    <details class="report-toc" open>
+        <summary id="оглавление">Оглавление</summary>
+        <nav class="report-toc-links" aria-label="Разделы отчёта">
+<ul>
+<li><p><a href="#lab01-data">1.0 Спринт 1: данные и общие методы</a></p>
+<ul>
+<li><a href="#lab01-source">1.0.1 Источник</a>
+<a
+href="#lab01-methods">1.0.2 Распределение и нормализация</a>
+<a
+href="#lab01-sampling">1.0.3 Выборочный дизайн</a></li>
+</ul></li>
+<li><p><a href="#lab01-logs">1.1 Случайное свойство №1: LogS</a></p>
+<ul>
+<li><a href="#logs-desc">1.1.1 Описание</a>
+<a href="#logs-eda">1.1.2
+EDA и дистрибуция</a>
+<a href="#logs-est">1.1.3 Независимость и
+оценки</a></li>
+</ul></li>
+<li><p><a href="#lab01-molwt">1.2 Случайное свойство №2: MolWt</a></p>
+<ul>
+<li><a href="#molwt-desc">1.2.1 Описание</a>
+<a
+href="#molwt-eda">1.2.2 EDA и дистрибуция</a>
+<a
+href="#molwt-est">1.2.3 Независимость и оценки</a></li>
+</ul></li>
+<li><p><a href="#lab01-logp">1.3 Случайное свойство №3: MolLogP</a></p>
+<ul>
+<li><a href="#logp-desc">1.3.1 Описание</a>
+<a href="#logp-eda">1.3.2
+EDA и дистрибуция</a>
+<a href="#logp-est">1.3.3 Независимость и
+оценки</a></li>
+</ul></li>
+<li><p><a href="#lab01-hypotheses">1.4 Зависимость и проверка
+гипотез</a></p>
+<ul>
+<li><a href="#lab01-finite">1.4.1 Независимость в базе</a>
+<a
+href="#lab01-test">1.4.2 Перестановочная проверка</a></li>
+</ul></li>
+<li><p><a href="#lab01-resume">1.5 Выводы по спринту 1</a></p></li>
+<li><p><a href="#lab01-cat_mark_table">1.6 Критерии оценивания по
+спринту 1</a></p></li>
+<li><p><a href="#lab02-sprint">2. Спринт 2: генераторы LogS</a></p>
+<ul>
+<li><a href="#lab02-generator">2.1 Генераторы</a></li>
+<li><a href="#lab02-desc">2.1.1 Описание</a>
+<a
+href="#lab02-math">2.1.2 Метод и обоснование</a>
+<a
+href="#lab02-code">2.1.3 Реализация</a></li>
+<li><a href="#lab02-tests">2.1.4 Автотесты</a>
+<a
+href="#lab02-compare">2.1.5 Проверка на AqSolDB</a>
+<a
+href="#lab02-findings">2.1.6 Вывод по генератору</a></li>
+<li><a href="#lab02-resume">2.2 Выводы по спринту 2</a>
+<a
+href="#lab02-refs">2.2.1 Литература</a>
+<a
+href="#lab02-cat_mark_table">2.2.2 Критерии оценивания по спринту 2</a>
+<a href="#lab01-criteria">2.2.3 Критерии оценивания для КТвД</a></li>
+</ul></li>
+</ul>
+        </nav>
+    </details>
+    <main class="report">
+<p><a id="lab01-toc" name="lab01-toc"></a></p>
+<h1 id="лабораторная-работа-1">Лабораторная работа №1</h1>
+<p><strong>Прикладная статистика - AqSolDB</strong></p>
+<p>Изучаем три свойства одного и того же случайно выбранного соединения:
+водную растворимость, молярную массу и расчётную липофильность.
+Описываем их распределения, сравниваем два способа отбора и проверяем,
+можно ли считать признаки независимыми.</p>
+<p><a id="lab01-data" name="lab01-data"></a></p>
+<h2 id="спринт-1-данные-и-общие-методы">1.0 Спринт 1: данные и общие
+методы</h2>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="lab01-source" name="lab01-source"></a></p>
+<h3 id="источник-и-случайный-эксперимент">1.0.1 Источник и случайный
+эксперимент</h3>
+<p>Используем <a
+href="https://www.nature.com/articles/s41597-019-0151-1">AqSolDB
+(Sorkun, Khetan и Er, Scientific Data)</a>. Все три столбца берём из
+одной <a
+href="https://github.com/mcsorkun/AqSolDB/blob/98cdd10a372058743e4f3fb950a1c9974ec9603a/results/data_curated.csv">зафиксированной
+версии CSV авторов</a>. <code>Solubility</code> уже хранится в
+логарифмическом виде: переименовываем в <code>LogS</code> без повторного
+логарифмирования. Проверяем полные дубликаты, ключи
+<code>InChIKey</code>, конечность всех трёх значений и положительность
+массы.</p>
+<p>Генеральная совокупность в этой работе - очищенная таблица, а не все
+химические соединения. Пусть
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>I</mi><annotation encoding="application/x-tex">I</annotation></semantics></math>
+- номер выбранного равновероятно соединения;
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+- фиксированный номер строки,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>
+- размер базы,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mrow><mi>i</mi><mi>j</mi></mrow></msub><annotation encoding="application/x-tex">x_{ij}</annotation></semantics></math>
+- табличное значение признака
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+в строке
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>.
+Тогда</p>
+<p id="evidence-formula"><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>I</mi><mo>=</mo><mi>i</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><mo>,</mo><mspace width="1.0em"></mspace><mi>i</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>N</mi><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>X</mi><mi>j</mi></msub><mo>=</mo><msub><mi>x</mi><mrow><mi>I</mi><mi>j</mi></mrow></msub><mo>,</mo><mspace width="1.0em"></mspace><mi>j</mi><mo>∈</mo><mo stretchy="false" form="prefix">{</mo><mn>1</mn><mo>,</mo><mn>2</mn><mo>,</mo><mn>3</mn><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\Pr(I=i)=\frac{1}{N},\quad i=1,\ldots,N,\qquad X_j=x_{Ij},\quad j\in\{1,2,3\}.
+</annotation></semantics></math></p>
+<p>После выбора строки каждое значение известно точно, но до выбора оно
+не предопределено: для каждого признака есть несколько различных
+значений с положительной вероятностью. Случайность здесь относится к
+выбору соединения, а не к вычислению RDKit или к отдельному замеру.
+AqSolDB объединяет ранее собранные данные; равные вероятности строк
+внутри этой базы не делают её случайным отбором из всего химического
+пространства.</p>
+<details class="code-cell"><summary>Загрузка и аудит AqSolDB</summary><pre><code class="language-python">from hashlib import sha256
+from inspect import signature
+from io import BytesIO
+from itertools import combinations
+from pathlib import Path
+from urllib.request import urlopen
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.colors import LogNorm, LinearSegmentedColormap
+import numpy as np
+import pandas as pd
+from scipy import stats
+from IPython.display import display
+
+%matplotlib inline
+
+SEED = 42
+FEATURES = (&quot;LogS&quot;, &quot;MolWt&quot;, &quot;MolLogP&quot;)
+LABEL = {&quot;LogS&quot;: &quot;LogS (безразм.)&quot;, &quot;MolWt&quot;: &quot;Молярная масса, г/моль&quot;,
+         &quot;MolLogP&quot;: &quot;MolLogP (безразм.)&quot;}
+UNIT = {&quot;LogS&quot;: &quot;безразм.&quot;, &quot;MolWt&quot;: &quot;г/моль&quot;, &quot;MolLogP&quot;: &quot;безразм.&quot;}
+URL = (&quot;https://raw.githubusercontent.com/mcsorkun/AqSolDB/&quot;
+       &quot;98cdd10a372058743e4f3fb950a1c9974ec9603a/results/data_curated.csv&quot;)
+EXPECTED_SHA = &quot;363a42a4e4ea8e6039758146d34efdd95cde2da81c665316cacc1869e0a805ed&quot;
+local = Path(&quot;data_curated.csv&quot;)
+if local.is_file():
+    payload = local.read_bytes()
+else:
+    with urlopen(URL, timeout=45) as response:
+        payload = response.read()
+if sha256(payload).hexdigest() != EXPECTED_SHA:
+    raise ValueError(&quot;CSV не совпадает с зафиксированной версией AqSolDB.&quot;)
+
+raw = pd.read_csv(BytesIO(payload)).rename(columns={&quot;Solubility&quot;: &quot;LogS&quot;})
+unique_rows = raw.drop_duplicates()
+numeric = unique_rows[list(FEATURES)].apply(pd.to_numeric, errors=&quot;coerce&quot;)
+keys = unique_rows[&quot;InChIKey&quot;].astype(&quot;string&quot;).str.strip()
+valid = (np.isfinite(numeric).all(axis=1) &amp; numeric[&quot;MolWt&quot;].gt(0)
+         &amp; keys.notna() &amp; keys.ne(&quot;&quot;))
+clean_rows = unique_rows.loc[valid].copy()
+clean_rows[list(FEATURES)] = numeric.loc[valid]
+clean_rows = clean_rows.reset_index(drop=True)
+data = clean_rows[list(FEATURES)].copy()
+N = len(data)
+assert not keys.loc[valid].duplicated().any(), &quot;Повтор InChIKey требует проверки.&quot;
+assert N &gt;= 500 and data.nunique().gt(1).all()
+
+audit = pd.Series({
+    &quot;Строк в исходном CSV&quot;: len(raw),
+    &quot;Удалено полных дубликатов&quot;: len(raw) - len(unique_rows),
+    &quot;Удалено некорректных строк&quot;: int((~valid).sum()),
+    &quot;Соединений после проверки&quot;: N,
+}, name=&quot;Число строк&quot;)
+display(audit.to_frame())
+display(data.nunique().rename(&quot;Различных значений&quot;).to_frame())</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Загрузка и аудит AqSolDB"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Число строк</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Строк в исходном CSV</th>
+      <td>9982</td>
+    </tr>
+    <tr>
+      <th>Удалено полных дубликатов</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Удалено некорректных строк</th>
+      <td>0</td>
+    </tr>
+    <tr>
+      <th>Соединений после проверки</th>
+      <td>9982</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Загрузка и аудит AqSolDB"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Различных значений</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>LogS</th>
+      <td>7872</td>
+    </tr>
+    <tr>
+      <th>MolWt</th>
+      <td>6907</td>
+    </tr>
+    <tr>
+      <th>MolLogP</th>
+      <td>8193</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p><a id="lab01-methods" name="lab01-methods"></a></p>
+<h3 id="распределение-статистики-и-нормализация">1.0.2 Распределение,
+статистики и нормализация</h3>
+<p>Точный закон при равновероятном выборе строки конечный и дискретный,
+даже если физическая величина непрерывна. Для каждого признака далее
+опускаем индекс
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>j</mi><annotation encoding="application/x-tex">j</annotation></semantics></math>
+и обозначаем его табличные значения через
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>x</mi><mi>i</mi></msub><annotation encoding="application/x-tex">x_i</annotation></semantics></math>.
+Повторяющиеся значения суммируют вероятности. Ступеньки графика
+показывают точную функцию распределения для базы, а гистограмма
+плотности только приближённо показывает форму.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>X</mi><mo>=</mo><mi>x</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mrow><mi>#</mi><mo stretchy="false" form="prefix">{</mo><mi>i</mi><mo>:</mo><msub><mi>x</mi><mi>i</mi></msub><mo>=</mo><mi>x</mi><mo stretchy="false" form="postfix">}</mo></mrow><mi>N</mi></mfrac><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>F</mi><mi>N</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>X</mi><mo>≤</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><mn>𝟏</mn><mo stretchy="false" form="prefix">{</mo><msub><mi>x</mi><mi>i</mi></msub><mo>≤</mo><mi>t</mi><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\Pr(X=x)=\frac{\#\{i:x_i=x\}}{N},\qquad
+F_N(t)=\Pr(X\leq t)=\frac{1}{N}\sum_{i=1}^{N}\mathbf{1}\{x_i\leq t\}.
+</annotation></semantics></math></p>
+<p>Используем среднее
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>μ</mi><annotation encoding="application/x-tex">\mu</annotation></semantics></math>,
+дисперсию
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msup><mi>σ</mi><mn>2</mn></msup><annotation encoding="application/x-tex">\sigma^2</annotation></semantics></math>
+с делителем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>,
+стандартное отклонение
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>σ</mi><annotation encoding="application/x-tex">\sigma</annotation></semantics></math>,
+медиану, квартильные границы, размах и форму хвостов. Коэффициенты
+асимметрии и эксцесса считаем по центральным моментам
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>m</mi><mi>k</mi></msub><annotation encoding="application/x-tex">m_k</annotation></semantics></math>;
+эксцесс нормального закона равен нулю.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>μ</mi><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msub><mi>x</mi><mi>i</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>m</mi><mi>k</mi></msub><mo>=</mo><mfrac><mn>1</mn><mi>N</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>N</mi></munderover><msup><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mi>μ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>k</mi></msup><mo>,</mo><mspace width="2.0em"></mspace><msup><mi>σ</mi><mn>2</mn></msup><mo>=</mo><msub><mi>m</mi><mn>2</mn></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>γ</mi><mn>1</mn></msub><mo>=</mo><mfrac><msub><mi>m</mi><mn>3</mn></msub><msup><mi>σ</mi><mn>3</mn></msup></mfrac><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>γ</mi><mn>2</mn></msub><mo>=</mo><mfrac><msub><mi>m</mi><mn>4</mn></msub><msup><mi>σ</mi><mn>4</mn></msup></mfrac><mo>−</mo><mn>3</mn><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\mu=\frac{1}{N}\sum_{i=1}^{N}x_i,\qquad
+m_k=\frac{1}{N}\sum_{i=1}^{N}(x_i-\mu)^k,\qquad
+\sigma^2=m_2,\qquad
+\gamma_1=\frac{m_3}{\sigma^3},\qquad
+\gamma_2=\frac{m_4}{\sigma^4}-3.
+</annotation></semantics></math></p>
+<p>Крайние наблюдения отмечаем, но не удаляем: правило Тьюки - ориентир
+для визуального анализа, а не критерий ошибочности. Плотность на
+гистограмме равна доле наблюдений в интервале, делённой на его ширину;
+суммарная площадь столбцов равна единице. Для массы единица плотности
+обратна единице оси, для двух логарифмических признаков плотность
+безразмерна.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo>=</mo><msub><mi>Q</mi><mn>0.75</mn></msub><mo>−</mo><msub><mi>Q</mi><mn>0.25</mn></msub><mo>,</mo><mspace width="2.0em"></mspace><mrow><mo stretchy="true" form="prefix">[</mo><msub><mi>Q</mi><mn>0.25</mn></msub><mo>−</mo><mn>1.5</mn><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo>,</mo><mspace width="0.167em"></mspace><msub><mi>Q</mi><mn>0.75</mn></msub><mo>+</mo><mn>1.5</mn><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">I</mi><mi mathvariant="normal">Q</mi><mi mathvariant="normal">R</mi></mrow><mo stretchy="true" form="postfix">]</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\mathrm{IQR}=Q_{0.75}-Q_{0.25},\qquad
+\left[Q_{0.25}-1.5\,\mathrm{IQR},\,Q_{0.75}+1.5\,\mathrm{IQR}\right].
+</annotation></semantics></math></p>
+<p>Сравниваем z-стандартизацию и min–max-нормализацию с параметрами всей
+базы. Первая центрирует данные и приводит стандартное отклонение к
+единице; вторая переводит наблюдаемый диапазон в
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="true" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">]</mo></mrow><annotation encoding="application/x-tex">[0,1]</annotation></semantics></math>.
+Ни одна из них не делает распределение нормальным. Q-Q-график сравнивает
+упорядоченные z-значения с квантилями эталона
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>𝒩</mi><mrow><mo stretchy="true" form="prefix">(</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\mathcal{N}(0,1)</annotation></semantics></math>;
+отклонения от диагонали особенно заметны в хвостах.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>z</mi><mi>i</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><mi>μ</mi></mrow><mi>σ</mi></mfrac><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>u</mi><mi>i</mi></msub><mo>=</mo><mfrac><mrow><msub><mi>x</mi><mi>i</mi></msub><mo>−</mo><msub><mi>x</mi><mo>min</mo></msub></mrow><mrow><msub><mi>x</mi><mo>max</mo></msub><mo>−</mo><msub><mi>x</mi><mo>min</mo></msub></mrow></mfrac><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>q</mi><mi>i</mi></msub><mo>=</mo><msup><mi>Φ</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup><mspace width="-0.167em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>i</mi><mo>−</mo><mn>0.5</mn></mrow><mi>N</mi></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><mi>φ</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>z</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><msup><mi>e</mi><mrow><mi>−</mi><msup><mi>z</mi><mn>2</mn></msup><mi>/</mi><mn>2</mn></mrow></msup><msqrt><mrow><mn>2</mn><mi>π</mi></mrow></msqrt></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+z_i=\frac{x_i-\mu}{\sigma},\qquad
+u_i=\frac{x_i-x_{\min}}{x_{\max}-x_{\min}},\qquad
+q_i=\Phi^{-1}\!\left(\frac{i-0.5}{N}\right),\qquad
+\varphi(z)=\frac{e^{-z^2/2}}{\sqrt{2\pi}}.
+</annotation></semantics></math></p>
+<p><a id="lab01-sampling" name="lab01-sampling"></a></p>
+<h3 id="выборочный-дизайн-и-проверка-сходимости">1.0.3 Выборочный дизайн
+и проверка сходимости</h3>
+<p>Сравниваем по одной простой случайной выборке объёма
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>500</mn></mrow><annotation encoding="application/x-tex">n=500</annotation></semantics></math>
+с возвращением и без него; каждый раз берём целые строки, чтобы
+сохранить связь признаков. С возвращением возможны повторы, без
+возвращения выбираются разные соединения. Используем базу как известный
+эталон: стандартная ошибка среднего рассчитана по истинной дисперсии, а
+не оценена по выборке. В формулах
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>Y</mi><mi>k</mi></msub><annotation encoding="application/x-tex">Y_k</annotation></semantics></math>
+- значение в
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>k</mi><annotation encoding="application/x-tex">k</annotation></semantics></math>-й
+выбранной строке.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>Y</mi><mo accent="true">‾</mo></mover><mi>n</mi></msub><mo>=</mo><mfrac><mn>1</mn><mi>n</mi></mfrac><munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msub><mi>Y</mi><mi>k</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msubsup><mi>s</mi><mi>n</mi><mn>2</mn></msubsup><mo>=</mo><mfrac><mn>1</mn><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow></mfrac><munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>n</mi></munderover><msup><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>Y</mi><mi>k</mi></msub><mo>−</mo><msub><mover><mi>Y</mi><mo accent="true">‾</mo></mover><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mn>2</mn></msup><mo>,</mo><mspace width="2.0em"></mspace><msup><mover><mi>σ</mi><mo accent="true">̂</mo></mover><mn>2</mn></msup><mo>=</mo><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><msubsup><mi>s</mi><mi>n</mi><mn>2</mn></msubsup></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">с возвращением</mtext><mo>,</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><mfrac displaystyle="true"><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow><mi>N</mi></mfrac><msubsup><mi>s</mi><mi>n</mi><mn>2</mn></msubsup></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">без возвращения</mtext><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">
+\bar Y_n=\frac{1}{n}\sum_{k=1}^{n}Y_k,\qquad
+s_n^2=\frac{1}{n-1}\sum_{k=1}^{n}(Y_k-\bar Y_n)^2,\qquad
+\widehat{\sigma}^2=
+\begin{cases}
+s_n^2 &amp; \text{с возвращением},\\
+\dfrac{N-1}{N}s_n^2 &amp; \text{без возвращения}.
+\end{cases}
+</annotation></semantics></math></p>
+<p>Поправка
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mo stretchy="true" form="prefix">(</mo><mi>N</mi><mo>−</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow><mi>/</mi><mi>N</mi></mrow><annotation encoding="application/x-tex">(N-1)/N</annotation></semantics></math>
+переводит несмещённую оценку дисперсии при отборе без возвращения к
+выбранному эталону с делителем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>N</mi><annotation encoding="application/x-tex">N</annotation></semantics></math>.
+Для стандартной ошибки среднего используется другая поправка,
+учитывающая долю охваченной базы:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>SE</mo><mrow><mo stretchy="true" form="prefix">(</mo><msub><mover><mi>Y</mi><mo accent="true">‾</mo></mover><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mi>σ</mi><msqrt><mi>n</mi></msqrt></mfrac><mrow><mo stretchy="true" form="prefix">{</mo><mtable><mtr><mtd columnalign="left" style="text-align: left"><mn>1</mn></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">с возвращением</mtext><mo>,</mo></mtd></mtr><mtr><mtd columnalign="left" style="text-align: left"><msqrt><mfrac displaystyle="true"><mrow><mi>N</mi><mo>−</mo><mi>n</mi></mrow><mrow><mi>N</mi><mo>−</mo><mn>1</mn></mrow></mfrac></msqrt></mtd><mtd columnalign="left" style="text-align: left"><mtext mathvariant="normal">без возвращения</mtext><mi>.</mi></mtd></mtr></mtable></mrow></mrow><annotation encoding="application/x-tex">
+\operatorname{SE}(\bar Y_n)=\frac{\sigma}{\sqrt n}
+\begin{cases}
+1 &amp; \text{с возвращением},\\
+\sqrt{\dfrac{N-n}{N-1}} &amp; \text{без возвращения}.
+\end{cases}
+</annotation></semantics></math></p>
+<p>Для каждого объёма и способа отбора делаем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>B</mi><mo>=</mo><mn>200</mn></mrow><annotation encoding="application/x-tex">B=200</annotation></semantics></math>
+повторов и сравниваем безразмерные ошибки для среднего и дисперсии.
+Уменьшение ошибок иллюстрирует состоятельность при независимом отборе с
+возвращением: по закону больших чисел сходятся первые два выборочных
+момента, значит, сходится и исправленная дисперсия. Без возвращения на
+фиксированной базе наблюдаем приближение к переписи, а не предел по
+бесконечному объёму; при
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mi>N</mi></mrow><annotation encoding="application/x-tex">n=N</annotation></semantics></math>
+обе ошибки равны нулю. Ноль не изображаем на логарифмической оси, но
+отдельно проверяем точку переписи.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><mover><mi>θ</mi><mo accent="true">̂</mo></mover><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msqrt><mrow><mfrac><mn>1</mn><mi>B</mi></mfrac><munderover><mo>∑</mo><mrow><mi>b</mi><mo>=</mo><mn>1</mn></mrow><mi>B</mi></munderover><msup><mrow><mo stretchy="true" form="prefix">(</mo><msub><mover><mi>θ</mi><mo accent="true">̂</mo></mover><mi>b</mi></msub><mo>−</mo><mi>θ</mi><mo stretchy="true" form="postfix">)</mo></mrow><mn>2</mn></msup></mrow></msqrt><mo>,</mo><mspace width="2.0em"></mspace><mfrac><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msub><mover><mi>Y</mi><mo accent="true">‾</mo></mover><mi>n</mi></msub><mo stretchy="true" form="postfix">)</mo></mrow></mrow><mi>σ</mi></mfrac><mo>,</mo><mspace width="1.0em"></mspace><mfrac><mrow><mrow><mi mathvariant="normal">R</mi><mi mathvariant="normal">M</mi><mi mathvariant="normal">S</mi><mi mathvariant="normal">E</mi></mrow><mrow><mo stretchy="true" form="prefix">(</mo><msup><mover><mi>σ</mi><mo accent="true">̂</mo></mover><mn>2</mn></msup><mo stretchy="true" form="postfix">)</mo></mrow></mrow><msup><mi>σ</mi><mn>2</mn></msup></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\mathrm{RMSE}(\widehat\theta)
+=\sqrt{\frac{1}{B}\sum_{b=1}^{B}\left(\widehat\theta_b-\theta\right)^2},
+\qquad
+\frac{\mathrm{RMSE}(\bar Y_n)}{\sigma},\quad
+\frac{\mathrm{RMSE}(\widehat{\sigma}^2)}{\sigma^2}.
+</annotation></semantics></math> Для сравнения также приводим абсолютные
+RMSE и долю повторов, в которых ошибка среднего по модулю превышает
+четверть стандартного отклонения признака. Для MolLogP отдельно показаны
+единичные выборки для объёмов из исходного анализа.</p>
+<details class="code-cell"><summary>Расчёт статистик, выборок и общий стиль графиков</summary><pre><code class="language-python">X = data.to_numpy(dtype=float)
+mu, var = data.mean(), data.var(ddof=0)
+sd = np.sqrt(var)
+methods = {True: &quot;С возвращением&quot;, False: &quot;Без возвращения&quot;}
+rng_sample = np.random.default_rng(SEED)
+rng_mc = np.random.default_rng(SEED + 1)
+seed_streams = np.random.SeedSequence(SEED).spawn(4)
+rng_test = np.random.default_rng(seed_streams[2])
+rng_perm = np.random.default_rng(seed_streams[3])
+n_sample, B = 500, 200
+sizes = sorted({n for n in (10, 30, 100, 300, 1000, 3000, 8000, N) if n &lt;= N})
+
+def finite_factor(replace, n):
+    return 1.0 if replace else (N - n) / (N - 1)
+
+def estimates(sample, replace):
+    variance = sample.var(axis=0, ddof=1)
+    if not replace:
+        variance *= (N - 1) / N
+    return sample.mean(axis=0), variance
+
+sample_rows, mc_rows = [], []
+sample_frames = {}
+for replace, method in methods.items():
+    indices = rng_sample.choice(N, size=n_sample, replace=replace)
+    sample_frames[replace] = clean_rows.iloc[indices].copy()
+    sample_mu, sample_var = estimates(X[indices], replace)
+    for j, c in enumerate(FEATURES):
+        sample_rows.append({
+            &quot;Признак&quot;: c, &quot;Отбор&quot;: method, &quot;Объём&quot;: n_sample,
+            &quot;Уникальных соединений&quot;: np.unique(indices).size,
+            &quot;Среднее&quot;: sample_mu[j], &quot;Дисперсия&quot;: sample_var[j],
+            &quot;Сдвиг среднего&quot;: sample_mu[j] - mu[c],
+            &quot;Абс. ошибка среднего&quot;: abs(sample_mu[j] - mu[c]),
+            &quot;Станд. ошибка среднего&quot;: sd[c] * np.sqrt(finite_factor(replace, n_sample) / n_sample),
+        })
+    for n in sizes:
+        if not replace and n == N:
+            census_mu, census_var = estimates(X, replace=False)
+            np.testing.assert_allclose(census_mu, mu, rtol=1e-13)
+            np.testing.assert_allclose(census_var, var, rtol=1e-13)
+            errors = np.zeros((2, len(FEATURES)))
+            large_mean_error = np.zeros(len(FEATURES))
+        else:
+            sims = np.array([estimates(X[rng_mc.choice(N, n, replace=replace)], replace)
+                             for _ in range(B)])
+            deviations = sims - np.array([mu, var])
+            errors = np.sqrt((deviations ** 2).mean(axis=0))
+            large_mean_error = (np.abs(deviations[:, 0, :]) &gt; .25 * sd.to_numpy()).mean(axis=0)
+        for j, c in enumerate(FEATURES):
+            mc_rows.append({
+                &quot;Признак&quot;: c, &quot;Отбор&quot;: method, &quot;n&quot;: n,
+                &quot;mean_rmse&quot;: errors[0, j] / sd[c], &quot;var_rmse&quot;: errors[1, j] / var[c],
+                &quot;mean_theory&quot;: np.sqrt(finite_factor(replace, n) / n),
+                &quot;RMSE среднего&quot;: errors[0, j],
+                &quot;RMSE дисперсии&quot;: errors[1, j],
+                &quot;Доля |ошибки среднего| &gt; 0.25σ&quot;: large_mean_error[j],
+            })
+
+samples = pd.DataFrame(sample_rows)
+mc = pd.DataFrame(mc_rows)
+assert len(mc) == 2 * len(FEATURES) * len(sizes)
+assert (mc[[&quot;mean_rmse&quot;, &quot;var_rmse&quot;, &quot;mean_theory&quot;]].ge(0)).all().all()
+positive_mc = mc[mc[&quot;mean_theory&quot;].gt(0)]
+limits = {}
+for key in (&quot;mean_rmse&quot;, &quot;var_rmse&quot;):
+    subset = positive_mc[[key, &quot;mean_theory&quot;]] if key == &quot;mean_rmse&quot; else positive_mc[[key]]
+    limits[key] = (subset.min().min() / 1.3, subset.max().max() * 1.3)
+
+BLUE, ORANGE, INK, GRID = &quot;#185a87&quot;, &quot;#a94e1b&quot;, &quot;#203447&quot;, &quot;#dbe5ec&quot;
+mpl.rcParams.update({
+    &quot;font.family&quot;: &quot;DejaVu Sans&quot;, &quot;mathtext.fontset&quot;: &quot;dejavusans&quot;,
+    &quot;font.size&quot;: 10, &quot;axes.titlesize&quot;: 11, &quot;axes.titleweight&quot;: &quot;bold&quot;,
+    &quot;axes.titlepad&quot;: 8, &quot;axes.labelsize&quot;: 10, &quot;axes.labelcolor&quot;: INK,
+    &quot;text.color&quot;: INK, &quot;xtick.color&quot;: INK, &quot;ytick.color&quot;: INK,
+    &quot;axes.edgecolor&quot;: &quot;#a7bac8&quot;, &quot;axes.spines.right&quot;: False, &quot;axes.spines.top&quot;: False,
+    &quot;axes.grid&quot;: True, &quot;axes.axisbelow&quot;: True, &quot;grid.color&quot;: GRID, &quot;grid.linewidth&quot;: .75,
+    &quot;figure.facecolor&quot;: &quot;white&quot;, &quot;axes.facecolor&quot;: &quot;white&quot;, &quot;figure.dpi&quot;: 125,
+    &quot;legend.frameon&quot;: False, &quot;legend.fontsize&quot;: 9, &quot;axes.formatter.use_mathtext&quot;: True,
+})
+
+saved_figures = {}
+
+def show(fig):
+    figure_number = len(saved_figures) + 1
+    png = BytesIO()
+    fig.savefig(png, format=&quot;png&quot;, dpi=125, bbox_inches=&quot;tight&quot;)
+    saved_figures[f&quot;figure_{figure_number:02d}.png&quot;] = png.getvalue()
+    plt.show()
+    plt.close(fig)
+
+def draw_hist(ax, x, label, unit):
+    edges = np.histogram_bin_edges(x, bins=&quot;fd&quot;)
+    heights, _ = np.histogram(x, bins=edges, density=True)
+    np.testing.assert_allclose(np.dot(heights, np.diff(edges)), 1)
+    ax.stairs(heights, edges, fill=True, color=BLUE, alpha=.68, linewidth=.7)
+    ax.axvline(np.mean(x), color=ORANGE, lw=1.65, label=&quot;Среднее&quot;)
+    ax.axvline(np.median(x), color=INK, lw=1.35, ls=&quot;--&quot;, label=&quot;Медиана&quot;)
+    density_label = (&quot;Плотность, (г/моль)$^{-1}$&quot; if unit == &quot;г/моль&quot;
+                     else &quot;Плотность (безразм.)&quot;)
+    ax.set(title=&quot;Гистограмма · интервалы Фридмана–Диакониса&quot;, xlabel=label,
+           ylabel=density_label, ylim=(0, None))
+    ax.legend()
+
+def draw_qq(ax, z):
+    obs = np.sort(z)
+    theoretical = stats.norm.ppf((np.arange(1, len(z) + 1) - .5) / len(z))
+    low, high = min(obs[0], theoretical[0]), max(obs[-1], theoretical[-1])
+    pad = .04 * (high - low)
+    lo, hi = low - pad, high + pad
+    ax.scatter(theoretical, obs, color=BLUE, s=9, alpha=.45, linewidths=0, label=&quot;Данные&quot;)
+    ax.plot([lo, hi], [lo, hi], ls=&quot;--&quot;, lw=1.25, color=ORANGE, label=&quot;Нормальный эталон&quot;)
+    ax.set(xlim=(lo, hi), ylim=(lo, hi), title=&quot;Q–Q · проверка формы&quot;,
+           xlabel=&quot;Квантили N(0, 1) (безразм.)&quot;, ylabel=&quot;Упорядоченные z (безразм.)&quot;)
+    ax.set_aspect(&quot;equal&quot;, adjustable=&quot;box&quot;)
+    ax.legend(loc=&quot;upper left&quot;)
+
+eda_metrics = {}
+
+def eda(c, number):
+    x = data[c].to_numpy()
+    q1, med, q3 = np.quantile(x, [.25, .5, .75])
+    iqr = q3 - q1
+    left, right = q1 - 1.5 * iqr, q3 + 1.5 * iqr
+    flagged = (x &lt; left) | (x &gt; right)
+    z = (x - mu[c]) / sd[c]
+    u = (x - x.min()) / np.ptp(x)
+    np.testing.assert_allclose([z.mean(), z.std(), u.min(), u.max()], [0, 1, 0, 1], atol=1e-12)
+    shape = stats.skew(x), stats.kurtosis(x)
+    eda_metrics[c] = {&quot;skew&quot;: shape[0], &quot;excess&quot;: shape[1], &quot;flagged&quot;: int(flagged.sum()),
+                      &quot;lower&quot;: left, &quot;upper&quot;: right, &quot;flagged_pct&quot;: 100 * flagged.mean()}
+    unit = UNIT[c]
+    common = unit if c == &quot;MolWt&quot; else &quot;безразм.&quot;
+    disp_unit = &quot;(г/моль)²&quot; if c == &quot;MolWt&quot; else &quot;безразм.&quot;
+    rows = [
+        (&quot;Среднее&quot;, mu[c], common), (&quot;Дисперсия&quot;, var[c], disp_unit),
+        (&quot;Стандартное отклонение&quot;, sd[c], common), (&quot;Минимум&quot;, x.min(), common),
+        (&quot;Первый квартиль&quot;, q1, common), (&quot;Медиана&quot;, med, common),
+        (&quot;Третий квартиль&quot;, q3, common), (&quot;Максимум&quot;, x.max(), common),
+        (&quot;Размах&quot;, np.ptp(x), common), (&quot;Межквартильный размах&quot;, iqr, common),
+        (&quot;Асимметрия&quot;, shape[0], &quot;безразм.&quot;), (&quot;Эксцесс&quot;, shape[1], &quot;безразм.&quot;),
+        (&quot;Нижняя граница Тьюки&quot;, left, common), (&quot;Верхняя граница Тьюки&quot;, right, common),
+        (&quot;За границами Тьюки&quot;, 100 * flagged.mean(), &quot;%&quot;),
+    ]
+    rows.insert(0, (&quot;Число соединений&quot;, N, &quot;шт.&quot;))
+    display(pd.DataFrame(rows, columns=[&quot;Статистика&quot;, &quot;Значение&quot;, &quot;Единица&quot;])
+            .set_index(&quot;Статистика&quot;).round({&quot;Значение&quot;: 4}))
+    display(pd.DataFrame(
+        [[z.mean(), z.std(), z.min(), z.max()], [u.mean(), u.std(), u.min(), u.max()]],
+        index=[&quot;z-стандартизация&quot;, &quot;Min–max&quot;], columns=[&quot;Среднее&quot;, &quot;Станд. отклонение&quot;, &quot;Мин.&quot;, &quot;Макс.&quot;]
+    ).round(4))
+
+    fig, ax = plt.subplots(2, 2, figsize=(11.3, 7.3), layout=&quot;constrained&quot;)
+    fig.suptitle(f&quot;Рисунок {number}. Распределение {c}&quot;, fontsize=14, fontweight=&quot;bold&quot;)
+    draw_hist(ax[0, 0], x, LABEL[c], unit)
+    box = ax[0, 1].boxplot
+    orientation = {&quot;orientation&quot;: &quot;horizontal&quot;} if &quot;orientation&quot; in signature(box).parameters else {&quot;vert&quot;: False}
+    box(x, **orientation, patch_artist=True,
+                    boxprops={&quot;facecolor&quot;: &quot;#cde0ee&quot;, &quot;edgecolor&quot;: BLUE},
+                    medianprops={&quot;color&quot;: ORANGE, &quot;linewidth&quot;: 1.8},
+                    whiskerprops={&quot;color&quot;: BLUE}, capprops={&quot;color&quot;: BLUE},
+                    flierprops={&quot;marker&quot;: &quot;o&quot;, &quot;markerfacecolor&quot;: BLUE, &quot;markersize&quot;: 2.5,
+                                &quot;markeredgewidth&quot;: 0, &quot;alpha&quot;: .45})
+    ax[0, 1].set(title=f&quot;Диаграмма размаха · отмечено {flagged.sum():,}&quot;.replace(&quot;,&quot;, &quot; &quot;),
+                 xlabel=LABEL[c], yticks=[])
+    unique, count = np.unique(x, return_counts=True)
+    assert count.sum() == N
+    pad = .04 * np.ptp(x)
+    ax[1, 0].step(np.r_[unique[0] - pad, unique, unique[-1] + pad],
+                  np.r_[0, np.cumsum(count) / N, 1], where=&quot;post&quot;, color=BLUE, lw=1.7)
+    ax[1, 0].set(title=&quot;Точная функция распределения для базы&quot;,
+                 xlabel=LABEL[c], ylabel=&quot;F(t) (безразм.)&quot;, ylim=(-.035, 1.035))
+    draw_qq(ax[1, 1], z)
+    for native in (ax[0, 0], ax[0, 1], ax[1, 0]):
+        lower = x.min() - pad
+        native.set_xlim(max(0, lower) if c == &quot;MolWt&quot; else lower, x.max() + pad)
+    show(fig)
+
+def comparison(c, number):
+    unit = UNIT[c]
+    rows = samples.query(&quot;Признак == @c&quot;).drop(columns=&quot;Признак&quot;).set_index(&quot;Отбор&quot;)
+    rows.loc[&quot;Вся база&quot;] = [N, N, mu[c], var[c], 0, 0, np.nan]
+    rows = rows.rename(columns={&quot;Среднее&quot;: f&quot;Среднее, {unit}&quot;,
+                               &quot;Сдвиг среднего&quot;: f&quot;Сдвиг среднего, {unit}&quot;,
+                               &quot;Абс. ошибка среднего&quot;: f&quot;Абс. ошибка среднего, {unit}&quot;,
+                               &quot;Станд. ошибка среднего&quot;: f&quot;Станд. ошибка, {unit}&quot;,
+                               &quot;Дисперсия&quot;: &quot;Дисперсия, &quot; + (&quot;(г/моль)²&quot; if c == &quot;MolWt&quot; else unit)})
+    for col in (&quot;Объём&quot;, &quot;Уникальных соединений&quot;):
+        rows[col] = rows[col].astype(int)
+    display(rows.round(4))
+
+    sub = mc.query(&quot;Признак == @c&quot;)
+    fig, axes = plt.subplots(1, 2, figsize=(11.3, 3.8), layout=&quot;constrained&quot;)
+    fig.suptitle(f&quot;Рисунок {number}. Сходимость оценок · {c}&quot;, fontsize=14, fontweight=&quot;bold&quot;)
+    positive = sub[sub[&quot;mean_theory&quot;].gt(0)]
+    for i, (key, title, ylabel) in enumerate([
+        (&quot;mean_rmse&quot;, &quot;Среднее&quot;, r&quot;RMSE / $\sigma$ (безразм.)&quot;),
+        (&quot;var_rmse&quot;, &quot;Дисперсия&quot;, r&quot;RMSE / $\sigma^2$ (безразм.)&quot;),
+    ]):
+        for replace, color, marker in ((True, BLUE, &quot;o&quot;), (False, ORANGE, &quot;s&quot;)):
+            method = methods[replace]
+            row = positive[positive[&quot;Отбор&quot;].eq(method)]
+            assert row[key].gt(0).all()
+            axes[i].loglog(row[&quot;n&quot;], row[key], color=color, marker=marker,
+                           markersize=4.2, lw=1.7, label=method)
+            if i == 0:
+                axes[i].loglog(row[&quot;n&quot;], row[&quot;mean_theory&quot;], ls=&quot;--&quot;, color=color,
+                               lw=1.15, label=&quot;Теория: &quot; + method.lower())
+        axes[i].set(title=title, xlabel=&quot;Объём выборки n (число отборов)&quot;,
+                    ylabel=ylabel, ylim=limits[key])
+        axes[i].legend()
+    show(fig)</code></pre></details>
+<p><a id="lab01-logs" name="lab01-logs"></a></p>
+<h2 id="случайная-величина-1-logs">1.1 Случайная величина №1: LogS</h2>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="logs-desc" name="logs-desc"></a></p>
+<h3 id="описание">1.1.1 Описание</h3>
+<p><code>LogS</code> - десятичный логарифм экспериментальной водной
+растворимости, приведённой авторами к моль/л. Пусть
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>S</mi><mi>i</mi></msub><annotation encoding="application/x-tex">S_i</annotation></semantics></math>
+- табличная растворимость соединения
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>i</mi><annotation encoding="application/x-tex">i</annotation></semantics></math>
+до логарифмирования. Тогда</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>X</mi><mn>1</mn></msub><mo>=</mo><msub><mo>log</mo><mn>10</mn></msub><mspace width="-0.167em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><msub><mi>S</mi><mi>I</mi></msub><mrow><mn>1</mn><mspace width="0.167em"></mspace><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow><mspace width="0.167em"></mspace><msup><mi mathvariant="normal">L</mi><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+X_1=\log_{10}\!\left(\frac{S_I}{1\,\mathrm{mol}\,\mathrm{L}^{-1}}\right).
+</annotation></semantics></math></p>
+<p>Логарифм безразмерен. Формула задаёт шкалу, но не предсказывает
+растворимость: для её применения нужно знать
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>S</mi><mi>I</mi></msub><annotation encoding="application/x-tex">S_I</annotation></semantics></math>.
+В AqSolDB объединены результаты разных измерений; на растворимость также
+влияют условия и свойства соединения. В нашем эксперименте случайный
+выбор соединения меняет табличное значение.</p>
+<p><a id="logs-eda" name="logs-eda"></a></p>
+<h3 id="eda-и-дистрибуция">1.1.2 EDA и дистрибуция</h3>
+<p>Среднее ниже медианы, а асимметрия отрицательна: в базе заметен хвост
+в сторону меньших значений растворимости. Q-Q-график не сводится к
+диагонали даже после стандартизации. Отрицательное значение LogS
+означает концентрацию ниже 1 моль/л, а не отрицательную
+растворимость.</p>
+<details class="code-cell"><summary>Описательные статистики и графики: LogS</summary><pre><code class="language-python">eda(&quot;LogS&quot;, 1)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: LogS"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Значение</th>
+      <th>Единица</th>
+    </tr>
+    <tr>
+      <th>Статистика</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Число соединений</th>
+      <td>9982.0000</td>
+      <td>шт.</td>
+    </tr>
+    <tr>
+      <th>Среднее</th>
+      <td>-2.8899</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Дисперсия</th>
+      <td>5.6076</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Стандартное отклонение</th>
+      <td>2.3680</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Минимум</th>
+      <td>-13.1719</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Первый квартиль</th>
+      <td>-4.3263</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Медиана</th>
+      <td>-2.6182</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Третий квартиль</th>
+      <td>-1.2097</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Максимум</th>
+      <td>2.1377</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Размах</th>
+      <td>15.3096</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Межквартильный размах</th>
+      <td>3.1166</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Асимметрия</th>
+      <td>-0.5516</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Эксцесс</th>
+      <td>-0.0600</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Нижняя граница Тьюки</th>
+      <td>-9.0012</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Верхняя граница Тьюки</th>
+      <td>3.4652</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>За границами Тьюки</th>
+      <td>0.8215</td>
+      <td>%</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: LogS"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Среднее</th>
+      <th>Станд. отклонение</th>
+      <th>Мин.</th>
+      <th>Макс.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>z-стандартизация</th>
+      <td>-0.0000</td>
+      <td>1.0000</td>
+      <td>-4.342</td>
+      <td>2.1231</td>
+    </tr>
+    <tr>
+      <th>Min–max</th>
+      <td>0.6716</td>
+      <td>0.1547</td>
+      <td>0.000</td>
+      <td>1.0000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-11-2.png" aria-label="Увеличить рисунок 1"><img loading="lazy" src="assets/plot-11-2.png" width="1427" height="927" alt="Описательные статистики и графики: LogS"></a>
+    <figcaption><span>Рисунок 1</span>Описательные статистики и графики: LogS</figcaption>
+</figure>
+<p><a id="logs-est" name="logs-est"></a></p>
+<h3 id="независимость-и-оценки">1.1.3 Независимость и оценки</h3>
+<p>До отбора значение LogS случайно; связь с обоими признаками той же
+строки проверяется в <a href="#lab01-hypotheses">разделе 1.4</a>. Ниже
+сопоставлены оценки для двух схем отбора и весь AqSolDB. Сдвиг -
+разность среднего выборки и среднего базы, со знаком.</p>
+<details class="code-cell"><summary>Выборочные оценки и сходимость: LogS</summary><pre><code class="language-python">comparison(&quot;LogS&quot;, 2)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Выборочные оценки и сходимость: LogS"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Объём</th>
+      <th>Уникальных соединений</th>
+      <th>Среднее, безразм.</th>
+      <th>Дисперсия, безразм.</th>
+      <th>Сдвиг среднего, безразм.</th>
+      <th>Абс. ошибка среднего, безразм.</th>
+      <th>Станд. ошибка, безразм.</th>
+    </tr>
+    <tr>
+      <th>Отбор</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>С возвращением</th>
+      <td>500</td>
+      <td>486</td>
+      <td>-2.9072</td>
+      <td>5.2712</td>
+      <td>-0.0173</td>
+      <td>0.0173</td>
+      <td>0.1059</td>
+    </tr>
+    <tr>
+      <th>Без возвращения</th>
+      <td>500</td>
+      <td>500</td>
+      <td>-2.8345</td>
+      <td>5.3884</td>
+      <td>0.0554</td>
+      <td>0.0554</td>
+      <td>0.1032</td>
+    </tr>
+    <tr>
+      <th>Вся база</th>
+      <td>9982</td>
+      <td>9982</td>
+      <td>-2.8899</td>
+      <td>5.6076</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure" id="evidence-sample-scale">
+    <a class="figure-zoom" href="assets/plot-13-1.png" aria-label="Увеличить рисунок 2"><img loading="lazy" src="assets/plot-13-1.png" width="1427" height="489" alt="Выборочные оценки и сходимость: LogS"></a>
+    <figcaption><span>Рисунок 2</span>Выборочные оценки и сходимость: LogS</figcaption>
+</figure>
+<p><a id="lab01-molwt" name="lab01-molwt"></a></p>
+<h2 id="случайная-величина-2-molwt">1.2 Случайная величина №2:
+MolWt</h2>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="molwt-desc" name="molwt-desc"></a></p>
+<h3 id="описание-1">1.2.1 Описание</h3>
+<p><code>MolWt</code> - средняя молекулярная масса из <a
+href="https://www.rdkit.org/docs/source/rdkit.Chem.Descriptors.html">документации
+RDKit</a>, представленная как молярная масса в г/моль. Для
+фиксированного соединения её можно вычислить по составу с учётом
+изотопов; поэтому не считаем алгоритм RDKit источником случайности. До
+отбора состав соединения неизвестен, и разные строки имеют разные
+массы.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>X</mi><mn>2</mn></msub><mo>=</mo><msub><mi>M</mi><mi>I</mi></msub><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>M</mi><mi>i</mi></msub><mo>&gt;</mo><mn>0</mn><mo>,</mo><mspace width="2.0em"></mspace><mrow><mo stretchy="true" form="prefix">[</mo><msub><mi>M</mi><mi>i</mi></msub><mo stretchy="true" form="postfix">]</mo></mrow><mo>=</mo><mi mathvariant="normal">g</mi><mspace width="0.167em"></mspace><msup><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow><mrow><mi>−</mi><mn>1</mn></mrow></msup><mi>.</mi></mrow><annotation encoding="application/x-tex">
+X_2=M_I,\qquad M_i&gt;0,\qquad [M_i]=\mathrm{g}\,\mathrm{mol}^{-1}.
+</annotation></semantics></math></p>
+<p><a id="molwt-eda" name="molwt-eda"></a></p>
+<h3 id="eda-и-дистрибуция-1">1.2.2 EDA и дистрибуция</h3>
+<p>Среднее заметно больше медианы: редкие большие массы растягивают
+правый хвост. Показываем весь диапазон, не срезая тяжёлые соединения.
+Отдельно исследуем логарифм массы, чтобы уменьшить асимметрию и
+сравнивать относительные изменения, а не разности в г/моль:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>T</mi><mo>=</mo><msub><mo>log</mo><mn>10</mn></msub><mspace width="-0.167em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><msub><mi>X</mi><mn>2</mn></msub><mrow><mn>1</mn><mspace width="0.167em"></mspace><mi mathvariant="normal">g</mi><mspace width="0.167em"></mspace><msup><mrow><mi mathvariant="normal">m</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow><mrow><mi>−</mi><mn>1</mn></mrow></msup></mrow></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+T=\log_{10}\!\left(\frac{X_2}{1\,\mathrm{g}\,\mathrm{mol}^{-1}}\right).
+</annotation></semantics></math></p>
+<p>Если бы
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>T</mi><annotation encoding="application/x-tex">T</annotation></semantics></math>
+имела нормальный закон, масса была бы логнормальной. На логарифмической
+шкале асимметрия уменьшается, но хвосты на Q-Q-графике всё ещё
+отклоняются от диагонали; логнормальность остаётся приближением, а не
+установленным законом.</p>
+<details class="code-cell"><summary>Описательные статистики и графики: MolWt</summary><pre><code class="language-python">eda(&quot;MolWt&quot;, 3)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: MolWt"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Значение</th>
+      <th>Единица</th>
+    </tr>
+    <tr>
+      <th>Статистика</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Число соединений</th>
+      <td>9982.0000</td>
+      <td>шт.</td>
+    </tr>
+    <tr>
+      <th>Среднее</th>
+      <td>266.6659</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Дисперсия</th>
+      <td>33918.5144</td>
+      <td>(г/моль)²</td>
+    </tr>
+    <tr>
+      <th>Стандартное отклонение</th>
+      <td>184.1698</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Минимум</th>
+      <td>9.0120</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Первый квартиль</th>
+      <td>162.2760</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Медиана</th>
+      <td>228.6820</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Третий квартиль</th>
+      <td>320.4360</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Максимум</th>
+      <td>5299.4560</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Размах</th>
+      <td>5290.4440</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Межквартильный размах</th>
+      <td>158.1600</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Асимметрия</th>
+      <td>5.4938</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Эксцесс</th>
+      <td>80.9231</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Нижняя граница Тьюки</th>
+      <td>-74.9640</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>Верхняя граница Тьюки</th>
+      <td>557.6760</td>
+      <td>г/моль</td>
+    </tr>
+    <tr>
+      <th>За границами Тьюки</th>
+      <td>4.8888</td>
+      <td>%</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: MolWt"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Среднее</th>
+      <th>Станд. отклонение</th>
+      <th>Мин.</th>
+      <th>Макс.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>z-стандартизация</th>
+      <td>-0.0000</td>
+      <td>1.0000</td>
+      <td>-1.399</td>
+      <td>27.3269</td>
+    </tr>
+    <tr>
+      <th>Min–max</th>
+      <td>0.0487</td>
+      <td>0.0348</td>
+      <td>0.000</td>
+      <td>1.0000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-17-2.png" aria-label="Увеличить рисунок 3"><img loading="lazy" src="assets/plot-17-2.png" width="1427" height="927" alt="Описательные статистики и графики: MolWt"></a>
+    <figcaption><span>Рисунок 3</span>Описательные статистики и графики: MolWt</figcaption>
+</figure>
+<details class="code-cell"><summary>Логарифм массы: плотность и Q–Q</summary><pre><code class="language-python">t = np.log10(data[&quot;MolWt&quot;].to_numpy())
+fig, ax = plt.subplots(1, 2, figsize=(11.3, 4.1), layout=&quot;constrained&quot;)
+fig.suptitle(&quot;Рисунок 4. Форма распределения после логарифмирования массы&quot;,
+             fontsize=14, fontweight=&quot;bold&quot;)
+draw_hist(ax[0], t, r&quot;$\log_{10}(M/(1\,\mathrm{г/моль}))$ (безразм.)&quot;, &quot;безразм.&quot;)
+draw_qq(ax[1], (t - t.mean()) / t.std())
+show(fig)
+print(f&quot;Асимметрия до преобразования: {stats.skew(data[&#x27;MolWt&#x27;]):.3f}; &quot;
+      f&quot;после: {stats.skew(t):.3f}.&quot;)</code></pre></details>
+<pre class="output">Асимметрия до преобразования: 5.494; после: 0.045.</pre>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-18-1.png" aria-label="Увеличить рисунок 4"><img loading="lazy" src="assets/plot-18-1.png" width="1288" height="527" alt="Логарифм массы: плотность и Q–Q"></a>
+    <figcaption><span>Рисунок 4</span>Логарифм массы: плотность и Q–Q</figcaption>
+</figure>
+<p><a id="molwt-est" name="molwt-est"></a></p>
+<h3 id="независимость-и-оценки-1">1.2.3 Независимость и оценки</h3>
+<p>Ниже сравниваются оценки на исходной шкале массы. Из-за правого
+хвоста несколько тяжёлых соединений могут сильно сдвинуть результат,
+особенно оценку дисперсии. Связь с LogS и MolLogP проверяется в <a
+href="#lab01-hypotheses">разделе 1.4</a>.</p>
+<details class="code-cell"><summary>Выборочные оценки и сходимость: MolWt</summary><pre><code class="language-python">comparison(&quot;MolWt&quot;, 5)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Выборочные оценки и сходимость: MolWt"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Объём</th>
+      <th>Уникальных соединений</th>
+      <th>Среднее, г/моль</th>
+      <th>Дисперсия, (г/моль)²</th>
+      <th>Сдвиг среднего, г/моль</th>
+      <th>Абс. ошибка среднего, г/моль</th>
+      <th>Станд. ошибка, г/моль</th>
+    </tr>
+    <tr>
+      <th>Отбор</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>С возвращением</th>
+      <td>500</td>
+      <td>486</td>
+      <td>273.8043</td>
+      <td>34904.6713</td>
+      <td>7.1384</td>
+      <td>7.1384</td>
+      <td>8.2363</td>
+    </tr>
+    <tr>
+      <th>Без возвращения</th>
+      <td>500</td>
+      <td>500</td>
+      <td>259.9217</td>
+      <td>33878.9287</td>
+      <td>-6.7442</td>
+      <td>6.7442</td>
+      <td>8.0278</td>
+    </tr>
+    <tr>
+      <th>Вся база</th>
+      <td>9982</td>
+      <td>9982</td>
+      <td>266.6659</td>
+      <td>33918.5144</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-20-1.png" aria-label="Увеличить рисунок 5"><img loading="lazy" src="assets/plot-20-1.png" width="1427" height="489" alt="Выборочные оценки и сходимость: MolWt"></a>
+    <figcaption><span>Рисунок 5</span>Выборочные оценки и сходимость: MolWt</figcaption>
+</figure>
+<p><a id="lab01-logp" name="lab01-logp"></a></p>
+<h2 id="случайная-величина-3-mollogp">1.3 Случайная величина №3:
+MolLogP</h2>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="logp-desc" name="logp-desc"></a></p>
+<h3 id="описание-2">1.3.1 Описание</h3>
+<p><code>MolLogP</code> - расчётный дескриптор липофильности, а не
+прямое измерение. Он оценивает десятичный логарифм безразмерного
+коэффициента распределения между октанолом и водой. В <a
+href="https://www.rdkit.org/docs/cppapi/namespaceRDKit_1_1Descriptors.html">RDKit,
+метод Wildman-Crippen</a> оценка строится по вкладам атомов заданных
+типов.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>X</mi><mn>3</mn></msub><mo>=</mo><mover><mrow><msub><mo>log</mo><mn>10</mn></msub><mi>P</mi></mrow><mo accent="true">̂</mo></mover><mrow><mo stretchy="true" form="prefix">(</mo><mi>I</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>,</mo><mspace width="2.0em"></mspace><mi>P</mi><mo>=</mo><mfrac><msub><mi>c</mi><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">c</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">n</mi><mi mathvariant="normal">o</mi><mi mathvariant="normal">l</mi></mrow></msub><msub><mi>c</mi><mrow><mi mathvariant="normal">w</mi><mi mathvariant="normal">a</mi><mi mathvariant="normal">t</mi><mi mathvariant="normal">e</mi><mi mathvariant="normal">r</mi></mrow></msub></mfrac><mi>.</mi></mrow><annotation encoding="application/x-tex">
+X_3=\widehat{\log_{10}P}(I),\qquad
+P=\frac{c_{\mathrm{octanol}}}{c_{\mathrm{water}}}.
+</annotation></semantics></math></p>
+<p>При фиксированной молекулярной структуре дескриптор детерминирован.
+Как и для массы, случайна строка, по которой берём результат вычисления.
+Дескриптор оценивает экспериментальный коэффициент по структуре
+молекулы.</p>
+<p><a id="logp-eda" name="logp-eda"></a></p>
+<h3 id="eda-и-дистрибуция-2">1.3.2 EDA и дистрибуция</h3>
+<p>Среднее и медиана близки, но это не признак нормального закона.
+Положительный эксцесс и выраженные отклонения на концах Q-Q-графика
+показывают, что в базе есть редкие крайние значения по обе стороны
+основной массы наблюдений. Они оставлены в анализе. Дополнительно
+сравниваем гистограмму и оценку плотности KDE с нормальной кривой,
+параметры которой подогнаны по данным. Кривая служит ориентиром для
+сравнения формы.</p>
+<details class="code-cell"><summary>Описательные статистики и графики: MolLogP</summary><pre><code class="language-python">eda(&quot;MolLogP&quot;, 6)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: MolLogP"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Значение</th>
+      <th>Единица</th>
+    </tr>
+    <tr>
+      <th>Статистика</th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Число соединений</th>
+      <td>9982.0000</td>
+      <td>шт.</td>
+    </tr>
+    <tr>
+      <th>Среднее</th>
+      <td>1.9792</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Дисперсия</th>
+      <td>12.3732</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Стандартное отклонение</th>
+      <td>3.5176</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Минимум</th>
+      <td>-40.8732</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Первый квартиль</th>
+      <td>0.6197</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Медиана</th>
+      <td>1.9492</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Третий квартиль</th>
+      <td>3.4190</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Максимум</th>
+      <td>68.5411</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Размах</th>
+      <td>109.4143</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Межквартильный размах</th>
+      <td>2.7993</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Асимметрия</th>
+      <td>0.7182</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Эксцесс</th>
+      <td>29.5092</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Нижняя граница Тьюки</th>
+      <td>-3.5792</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>Верхняя граница Тьюки</th>
+      <td>7.6180</td>
+      <td>безразм.</td>
+    </tr>
+    <tr>
+      <th>За границами Тьюки</th>
+      <td>7.0226</td>
+      <td>%</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Описательные статистики и графики: MolLogP"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Среднее</th>
+      <th>Станд. отклонение</th>
+      <th>Мин.</th>
+      <th>Макс.</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>z-стандартизация</th>
+      <td>-0.0000</td>
+      <td>1.0000</td>
+      <td>-12.1824</td>
+      <td>18.9228</td>
+    </tr>
+    <tr>
+      <th>Min–max</th>
+      <td>0.3917</td>
+      <td>0.0321</td>
+      <td>0.0000</td>
+      <td>1.0000</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-24-2.png" aria-label="Увеличить рисунок 6"><img loading="lazy" src="assets/plot-24-2.png" width="1427" height="927" alt="Описательные статистики и графики: MolLogP"></a>
+    <figcaption><span>Рисунок 6</span>Описательные статистики и графики: MolLogP</figcaption>
+</figure>
+<details class="code-cell"><summary>MolLogP: сравнение плотностей</summary><pre><code class="language-python">logp = data[&quot;MolLogP&quot;].to_numpy()
+fit_mu, fit_sigma = stats.norm.fit(logp)
+grid = np.linspace(logp.min(), logp.max(), 1200)
+fig, axis = plt.subplots(figsize=(10, 4), layout=&quot;constrained&quot;)
+fig.suptitle(&quot;Рисунок 7. MolLogP и нормальный ориентир&quot;, fontsize=14, fontweight=&quot;bold&quot;)
+axis.hist(logp, bins=50, density=True, alpha=.25, color=BLUE, label=&quot;Гистограмма&quot;)
+axis.plot(grid, stats.gaussian_kde(logp)(grid), color=BLUE, label=&quot;Оценка плотности KDE&quot;)
+axis.plot(grid, stats.norm.pdf(grid, fit_mu, fit_sigma), &quot;--&quot;, color=ORANGE,
+          label=f&quot;Нормальная кривая, μ={fit_mu:.2f}, σ={fit_sigma:.2f}&quot;)
+axis.set(xlabel=LABEL[&quot;MolLogP&quot;], ylabel=&quot;Плотность (безразм.)&quot;, ylim=(0, None))
+axis.legend()
+show(fig)</code></pre></details>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-25-0.png" aria-label="Увеличить рисунок 7"><img loading="lazy" src="assets/plot-25-0.png" width="1264" height="514" alt="MolLogP: сравнение плотностей"></a>
+    <figcaption><span>Рисунок 7</span>MolLogP: сравнение плотностей</figcaption>
+</figure>
+<p><a id="logp-est" name="logp-est"></a></p>
+<h3 id="независимость-и-оценки-2">1.3.3 Независимость и оценки</h3>
+<p>Оценки рассчитаны теми же способами и по тем же строкам, что для
+первых двух признаков. Почти одинаковые среднее и медиана всей базы не
+устраняют влияния крайних значений на дисперсию. Связи с двумя другими
+признаками разбираются в <a href="#lab01-hypotheses">разделе 1.4</a>.
+Таблица единичных выборок показывает, что абсолютная ошибка при одном
+отборе может колебаться с ростом объёма. На графике сходимости показана
+уже среднеквадратичная ошибка по 200 повторам.</p>
+<details class="code-cell"><summary>Выборочные оценки и сходимость: MolLogP</summary><pre><code class="language-python">comparison(&quot;MolLogP&quot;, 8)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Выборочные оценки и сходимость: MolLogP"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Объём</th>
+      <th>Уникальных соединений</th>
+      <th>Среднее, безразм.</th>
+      <th>Дисперсия, безразм.</th>
+      <th>Сдвиг среднего, безразм.</th>
+      <th>Абс. ошибка среднего, безразм.</th>
+      <th>Станд. ошибка, безразм.</th>
+    </tr>
+    <tr>
+      <th>Отбор</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>С возвращением</th>
+      <td>500</td>
+      <td>486</td>
+      <td>1.8926</td>
+      <td>12.4999</td>
+      <td>-0.0866</td>
+      <td>0.0866</td>
+      <td>0.1573</td>
+    </tr>
+    <tr>
+      <th>Без возвращения</th>
+      <td>500</td>
+      <td>500</td>
+      <td>1.8808</td>
+      <td>13.6031</td>
+      <td>-0.0983</td>
+      <td>0.0983</td>
+      <td>0.1533</td>
+    </tr>
+    <tr>
+      <th>Вся база</th>
+      <td>9982</td>
+      <td>9982</td>
+      <td>1.9792</td>
+      <td>12.3732</td>
+      <td>0.0000</td>
+      <td>0.0000</td>
+      <td>NaN</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-27-1.png" aria-label="Увеличить рисунок 8"><img loading="lazy" src="assets/plot-27-1.png" width="1427" height="489" alt="Выборочные оценки и сходимость: MolLogP"></a>
+    <figcaption><span>Рисунок 8</span>Выборочные оценки и сходимость: MolLogP</figcaption>
+</figure>
+<details class="code-cell"><summary>MolLogP: единичные выборки для разных объёмов</summary><pre><code class="language-python">rng_logp = np.random.RandomState(SEED)
+logp_examples = []
+for sample_size in (10, 50, 100, 500, 1000, 5000):
+    for replace_rows in (False, True):
+        estimate = data[&quot;MolLogP&quot;].sample(sample_size, replace=replace_rows,
+                                         random_state=rng_logp).mean()
+        logp_examples.append({
+            &quot;Объём&quot;: sample_size, &quot;Отбор&quot;: methods[replace_rows], &quot;Среднее&quot;: estimate,
+            &quot;Абс. ошибка среднего&quot;: abs(estimate - mu[&quot;MolLogP&quot;]),
+        })
+logp_example_table = pd.DataFrame(logp_examples)
+display(logp_example_table.pivot(index=&quot;Объём&quot;, columns=&quot;Отбор&quot;).round(4))</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="MolLogP: единичные выборки для разных объёмов"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th colspan="2" halign="left">Среднее</th>
+      <th colspan="2" halign="left">Абс. ошибка среднего</th>
+    </tr>
+    <tr>
+      <th>Отбор</th>
+      <th>Без возвращения</th>
+      <th>С возвращением</th>
+      <th>Без возвращения</th>
+      <th>С возвращением</th>
+    </tr>
+    <tr>
+      <th>Объём</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>10</th>
+      <td>2.0959</td>
+      <td>2.5485</td>
+      <td>0.1167</td>
+      <td>0.5693</td>
+    </tr>
+    <tr>
+      <th>50</th>
+      <td>1.6730</td>
+      <td>1.5483</td>
+      <td>0.3061</td>
+      <td>0.4309</td>
+    </tr>
+    <tr>
+      <th>100</th>
+      <td>2.1178</td>
+      <td>2.0958</td>
+      <td>0.1387</td>
+      <td>0.1166</td>
+    </tr>
+    <tr>
+      <th>500</th>
+      <td>1.9077</td>
+      <td>1.7085</td>
+      <td>0.0715</td>
+      <td>0.2707</td>
+    </tr>
+    <tr>
+      <th>1000</th>
+      <td>1.9692</td>
+      <td>1.7929</td>
+      <td>0.0100</td>
+      <td>0.1862</td>
+    </tr>
+    <tr>
+      <th>5000</th>
+      <td>1.9415</td>
+      <td>1.9703</td>
+      <td>0.0376</td>
+      <td>0.0089</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p><a id="lab01-hypotheses" name="lab01-hypotheses"></a></p>
+<h2 id="зависимость-и-проверка-гипотез">1.4 Зависимость и проверка
+гипотез</h2>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="lab01-finite" name="lab01-finite"></a></p>
+<h3 id="проверка-независимости-в-конечной-совокупности">1.4.1 Проверка
+независимости в конечной совокупности</h3>
+<p>Для каждой пары обозначим через
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+и
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+события «соответствующий признак не выше своей медианы по базе». Считаем
+числа строк
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mi>A</mi></msub><annotation encoding="application/x-tex">n_A</annotation></semantics></math>,
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mi>B</mi></msub><annotation encoding="application/x-tex">n_B</annotation></semantics></math>
+и
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>n</mi><mrow><mi>A</mi><mi>B</mi></mrow></msub><annotation encoding="application/x-tex">n_{AB}</annotation></semantics></math>.
+Для независимых признаков равенство вероятностей должно выполняться для
+любых порогов, поэтому достаточно одного контрпримера. Сравниваем целые
+числа, чтобы не спутать расхождение с погрешностью округления.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>A</mi><mo>∩</mo><mi>B</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>A</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>B</mi><mo stretchy="true" form="postfix">)</mo></mrow><mspace width="1.0em"></mspace><mo>⇔</mo><mspace width="1.0em"></mspace><mi>N</mi><msub><mi>n</mi><mrow><mi>A</mi><mi>B</mi></mrow></msub><mo>=</mo><msub><mi>n</mi><mi>A</mi></msub><msub><mi>n</mi><mi>B</mi></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\Pr(A\cap B)=\Pr(A)\Pr(B)
+\quad\Longleftrightarrow\quad
+Nn_{AB}=n_A n_B.
+</annotation></semantics></math></p>
+<p>Диаграммы ниже показывают все наблюдения. Цвет кодирует число строк в
+шестиграннике по общей логарифмической шкале; оси самих признаков
+линейные. Коэффициенты Пирсона и Спирмена описывают линейную и
+монотонную связь соответственно. Тепловые карты показывают эти же
+коэффициенты на общей шкале от −1 до 1. Корреляция описывает связь в
+базе.</p>
+<div class="study-card pair-explorer" id="evidence-pair-explorer">
+    <span class="pair-anchor" id="pair-logs-molwt" aria-hidden="true"></span><span class="pair-anchor" id="pair-logs-mollogp" aria-hidden="true"></span><span class="pair-anchor" id="pair-molwt-mollogp" aria-hidden="true"></span>
+    <h4>Диаграммы связей</h4>
+    <div class="chart-switch pair-controls" role="group" aria-label="Пара признаков" hidden><a href="#pair-logs-molwt" aria-controls="chart-logs-molwt">LogS × MolWt</a><a href="#pair-logs-mollogp" aria-controls="chart-logs-mollogp">LogS × MolLogP</a><a href="#pair-molwt-mollogp" aria-controls="chart-molwt-mollogp">MolWt × MolLogP</a></div>
+    <div class="pair-panel" id="chart-logs-molwt" data-correlation-pair="logs-molwt">
+        <dl class="pair-metrics">
+            <div><dt>Пирсон</dt><dd>−0,3680</dd></div>
+            <div><dt>Спирмен</dt><dd>−0,5386</dd></div>
+        </dl>
+        <figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/pair-logs-molwt.png" aria-label="Увеличить: LogS × MolWt">
+        <img src="assets/pair-logs-molwt.png" width="1189" height="667" loading="lazy" alt="LogS × MolWt">
+    </a>
+    <figcaption><span>LogS × MolWt</span></figcaption>
+</figure>
+    </div><div class="pair-panel" id="chart-logs-mollogp" data-correlation-pair="logs-mollogp">
+        <dl class="pair-metrics">
+            <div><dt>Пирсон</dt><dd>−0,6086</dd></div>
+            <div><dt>Спирмен</dt><dd>−0,7398</dd></div>
+        </dl>
+        <figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/pair-logs-mollogp.png" aria-label="Увеличить: LogS × MolLogP">
+        <img src="assets/pair-logs-mollogp.png" width="1189" height="667" loading="lazy" alt="LogS × MolLogP">
+    </a>
+    <figcaption><span>LogS × MolLogP</span></figcaption>
+</figure>
+    </div><div class="pair-panel" id="chart-molwt-mollogp" data-correlation-pair="molwt-mollogp">
+        <dl class="pair-metrics">
+            <div><dt>Пирсон</dt><dd>0,2745</dd></div>
+            <div><dt>Спирмен</dt><dd>0,4216</dd></div>
+        </dl>
+        <figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/pair-molwt-mollogp.png" aria-label="Увеличить: MolWt × MolLogP">
+        <img src="assets/pair-molwt-mollogp.png" width="1189" height="667" loading="lazy" alt="MolWt × MolLogP">
+    </a>
+    <figcaption><span>MolWt × MolLogP</span></figcaption>
+</figure>
+    </div>
+</div>
+<details class="code-cell"><summary>Точный контрпример, корреляции и диаграммы связей</summary><pre><code class="language-python">pairs = list(combinations(FEATURES, 2))
+events = data.le(data.median())
+dep_rows = []
+for left, right in pairs:
+    a, b = int(events[left].sum()), int(events[right].sum())
+    ab = int((events[left] &amp; events[right]).sum())
+    dep_rows.append({
+        &quot;Пара&quot;: f&quot;{left} / {right}&quot;, &quot;n(A)&quot;: a, &quot;n(B)&quot;: b, &quot;n(A ∩ B)&quot;: ab,
+        &quot;P(A ∩ B)&quot;: ab / N, &quot;P(A)·P(B)&quot;: a * b / N**2,
+        &quot;Равенство выполнено&quot;: N * ab == a * b,
+        &quot;Пирсон&quot;: stats.pearsonr(data[left], data[right]).statistic,
+        &quot;Спирмен&quot;: stats.spearmanr(data[left], data[right]).statistic,
+    })
+dependence = pd.DataFrame(dep_rows).set_index(&quot;Пара&quot;)
+display(dependence.round(4))
+
+cmap = LinearSegmentedColormap.from_list(&quot;aqsol-blue&quot;, [&quot;#dbeaf4&quot;, &quot;#6597b9&quot;, &quot;#13466b&quot;])
+fig, ax = plt.subplots(1, 3, figsize=(12, 3.9), layout=&quot;constrained&quot;)
+fig.suptitle(&quot;Рисунок 9. Как связаны признаки одного соединения&quot;, fontsize=14, fontweight=&quot;bold&quot;)
+hexbins = []
+for axis, (left, right) in zip(ax, pairs):
+    h = axis.hexbin(data[left], data[right], gridsize=45, mincnt=1, cmap=cmap, linewidths=0)
+    assert h.get_array().sum() == N
+    hexbins.append(h)
+    axis.set(title=f&quot;{left} / {right}&quot;, xlabel=LABEL[left], ylabel=LABEL[right])
+    if left == &quot;MolWt&quot;:
+        axis.set_xlim(left=0)
+    if right == &quot;MolWt&quot;:
+        axis.set_ylim(bottom=0)
+shared = LogNorm(vmin=1, vmax=max(h.get_array().max() for h in hexbins))
+for h in hexbins:
+    h.set_norm(shared)
+fig.colorbar(hexbins[0], ax=ax, label=&quot;Число соединений (лог. шкала)&quot;, shrink=.87)
+show(fig)</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Точный контрпример, корреляции и диаграммы связей"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>n(A)</th>
+      <th>n(B)</th>
+      <th>n(A ∩ B)</th>
+      <th>P(A ∩ B)</th>
+      <th>P(A)·P(B)</th>
+      <th>Равенство выполнено</th>
+      <th>Пирсон</th>
+      <th>Спирмен</th>
+    </tr>
+    <tr>
+      <th>Пара</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>LogS / MolWt</th>
+      <td>4991</td>
+      <td>4993</td>
+      <td>1465</td>
+      <td>0.1468</td>
+      <td>0.2501</td>
+      <td>False</td>
+      <td>-0.3680</td>
+      <td>-0.5386</td>
+    </tr>
+    <tr>
+      <th>LogS / MolLogP</th>
+      <td>4991</td>
+      <td>4991</td>
+      <td>1018</td>
+      <td>0.1020</td>
+      <td>0.2500</td>
+      <td>False</td>
+      <td>-0.6086</td>
+      <td>-0.7398</td>
+    </tr>
+    <tr>
+      <th>MolWt / MolLogP</th>
+      <td>4993</td>
+      <td>4991</td>
+      <td>3296</td>
+      <td>0.3302</td>
+      <td>0.2501</td>
+      <td>False</td>
+      <td>0.2745</td>
+      <td>0.4216</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-31-1.png" aria-label="Увеличить рисунок 9"><img loading="lazy" src="assets/plot-31-1.png" width="1511" height="502" alt="Точный контрпример, корреляции и диаграммы связей"></a>
+    <figcaption><span>Рисунок 9</span>Точный контрпример, корреляции и диаграммы связей</figcaption>
+</figure>
+<details class="code-cell"><summary>Матрицы корреляций Пирсона и Спирмена</summary><pre><code class="language-python">corr_matrices = {name: data.corr(method=method)
+                 for name, method in ((&quot;Пирсона&quot;, &quot;pearson&quot;), (&quot;Спирмена&quot;, &quot;spearman&quot;))}
+fig, axes = plt.subplots(1, 2, figsize=(10, 4.6), layout=&quot;constrained&quot;)
+fig.suptitle(&quot;Рисунок 10. Матрицы корреляций&quot;, fontsize=14, fontweight=&quot;bold&quot;)
+for axis, (name, matrix) in zip(axes, corr_matrices.items()):
+    color = axis.imshow(matrix, cmap=&quot;RdBu&quot;, vmin=-1, vmax=1)
+    axis.set(title=f&quot;Корреляция {name}&quot;, xticks=range(3), yticks=range(3),
+             xticklabels=FEATURES, yticklabels=FEATURES)
+    axis.grid(False)
+    for row, col in np.ndindex(matrix.shape):
+        r = matrix.iat[row, col]
+        axis.text(col, row, f&quot;{r:.3f}&quot;, ha=&quot;center&quot;, va=&quot;center&quot;,
+                  color=&quot;white&quot; if abs(r) &gt; .62 else INK)
+fig.colorbar(color, ax=axes, shrink=.85, label=&quot;Коэффициент (безразм.)&quot;)
+show(fig)</code></pre></details>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-32-0.png" aria-label="Увеличить рисунок 10"><img loading="lazy" src="assets/plot-32-0.png" width="1261" height="577" alt="Матрицы корреляций Пирсона и Спирмена"></a>
+    <figcaption><span>Рисунок 10</span>Матрицы корреляций Пирсона и Спирмена</figcaption>
+</figure>
+<p><a id="lab01-test" name="lab01-test"></a></p>
+<h3 id="перестановочная-проверка-на-выборке">1.4.2 Перестановочная
+проверка на выборке</h3>
+<p>В исходнике для LogS и MolLogP использовали тест Пирсона на всей
+базе. Здесь коэффициент Пирсона для всей базы приводим как описательную
+статистику. Значимость проверяем отдельно для всех трёх пар в случайной
+выборке.</p>
+<p>Проверяем, видна ли зависимость по выборке из
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>=</mo><mn>500</mn></mrow><annotation encoding="application/x-tex">n=500</annotation></semantics></math>
+независимых отборов с возвращением. Для каждой пары
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>H</mi><mn>0</mn></msub><annotation encoding="application/x-tex">H_0</annotation></semantics></math>:
+признаки независимы в выбранной совокупности, поэтому вторую координату
+можно переставлять между строками без изменения совместного закона.
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>H</mi><mn>1</mn></msub><annotation encoding="application/x-tex">H_1</annotation></semantics></math>:
+независимость нарушена. Статистика
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo stretchy="false" form="prefix">|</mo><mi>r</mi><mo stretchy="false" form="postfix">|</mo></mrow><annotation encoding="application/x-tex">\lvert r\rvert</annotation></semantics></math>
+чувствительна прежде всего к связи, проявляющейся в линейной корреляции;
+неотклонение не доказывало бы независимость. Модули нужны для
+двусторонней проверки.</p>
+<p>Для каждой пары делаем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>R</mi><mo>=</mo><mn>9999</mn></mrow><annotation encoding="application/x-tex">R=9999</annotation></semantics></math>
+случайных перестановок и сравниваем их корреляции
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msubsup><mi>r</mi><mi>b</mi><mo>*</mo></msubsup><annotation encoding="application/x-tex">r_b^{*}</annotation></semantics></math>
+с наблюдаемой
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><msub><mi>r</mi><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi></mrow></msub><annotation encoding="application/x-tex">r_{\mathrm{obs}}</annotation></semantics></math>.
+Применяем поправку Бонферрони для трёх пар и сравниваем
+скорректированное значение с уровнем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi><mo>=</mo><mn>0.05</mn></mrow><annotation encoding="application/x-tex">\alpha=0.05</annotation></semantics></math>.</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>p</mi><mo>=</mo><mfrac><mrow><mn>1</mn><mo>+</mo><munderover><mo>∑</mo><mrow><mi>b</mi><mo>=</mo><mn>1</mn></mrow><mi>R</mi></munderover><mn>𝟏</mn><mo stretchy="false" form="prefix">{</mo><mo stretchy="false" form="prefix">|</mo><msubsup><mi>r</mi><mi>b</mi><mo>*</mo></msubsup><mo stretchy="false" form="postfix">|</mo><mo>≥</mo><mo stretchy="false" form="prefix">|</mo><msub><mi>r</mi><mrow><mi mathvariant="normal">o</mi><mi mathvariant="normal">b</mi><mi mathvariant="normal">s</mi></mrow></msub><mo stretchy="false" form="postfix">|</mo><mo stretchy="false" form="postfix">}</mo></mrow><mrow><mi>R</mi><mo>+</mo><mn>1</mn></mrow></mfrac><mo>,</mo><mspace width="2.0em"></mspace><msub><mi>p</mi><mrow><mi mathvariant="normal">a</mi><mi mathvariant="normal">d</mi><mi mathvariant="normal">j</mi></mrow></msub><mo>=</mo><mo>min</mo><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo>,</mo><mn>3</mn><mi>p</mi><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+p=\frac{1+\sum_{b=1}^{R}\mathbf{1}\{\lvert r_b^{*}\rvert\geq\lvert r_{\mathrm{obs}}\rvert\}}{R+1},
+\qquad p_{\mathrm{adj}}=\min(1,3p).
+</annotation></semantics></math></p>
+<details class="code-cell"><summary>Перестановочный тест: три пары, поправка Бонферрони</summary><pre><code class="language-python">R, alpha = 9999, .05
+trial = data.iloc[rng_test.choice(N, size=500, replace=True)]
+test_rows = []
+for left, right in pairs:
+    x, y = trial[left].to_numpy(), trial[right].to_numpy()
+    x, y = x - x.mean(), y - y.mean()
+    divisor = np.linalg.norm(x) * np.linalg.norm(y)
+    r_obs = float(x @ y / divisor)
+    exceed = sum(abs(x @ rng_perm.permutation(y) / divisor) &gt;= abs(r_obs) - 1e-14
+                 for _ in range(R))
+    p = (1 + exceed) / (R + 1)
+    adjusted = min(1, len(pairs) * p)
+    test_rows.append({&quot;Пара&quot;: f&quot;{left} / {right}&quot;, &quot;r в выборке&quot;: r_obs,
+                      &quot;Не менее экстремальных&quot;: exceed, &quot;p&quot;: p, &quot;p с поправкой&quot;: adjusted,
+                      &quot;Решение при α = 0,05&quot;: &quot;Отклоняем H₀&quot; if adjusted &lt;= alpha else &quot;Не отклоняем H₀&quot;})
+tests = pd.DataFrame(test_rows).set_index(&quot;Пара&quot;)
+assert tests[&quot;p&quot;].between(1 / (R + 1), 1).all()
+display(tests.round(5))</code></pre></details>
+<div class="scroll" tabindex="0" role="region" aria-label="Перестановочный тест: три пары, поправка Бонферрони"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>r в выборке</th>
+      <th>Не менее экстремальных</th>
+      <th>p</th>
+      <th>p с поправкой</th>
+      <th>Решение при α = 0,05</th>
+    </tr>
+    <tr>
+      <th>Пара</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>LogS / MolWt</th>
+      <td>-0.39207</td>
+      <td>0</td>
+      <td>0.0001</td>
+      <td>0.0003</td>
+      <td>Отклоняем H₀</td>
+    </tr>
+    <tr>
+      <th>LogS / MolLogP</th>
+      <td>-0.68894</td>
+      <td>0</td>
+      <td>0.0001</td>
+      <td>0.0003</td>
+      <td>Отклоняем H₀</td>
+    </tr>
+    <tr>
+      <th>MolWt / MolLogP</th>
+      <td>0.35285</td>
+      <td>0</td>
+      <td>0.0001</td>
+      <td>0.0003</td>
+      <td>Отклоняем H₀</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p><a id="lab01-resume" name="lab01-resume"></a></p>
+<h2 id="выводы-по-спринту-1">1.5 Выводы по спринту 1</h2>
+<p>LogS имеет левый хвост, MolWt — выраженный правый хвост, а у MolLogP
+встречаются редкие крайние значения. Поэтому форму распределений
+оцениваем вместе со средним, разбросом, асимметрией и эксцессом.</p>
+<p>С ростом объёма выборки среднеквадратичная ошибка оценок в целом
+снижается. Абсолютная ошибка отдельной случайной выборки может
+колебаться. При отборе всех строк без возвращения среднее и дисперсия
+совпадают с показателями базы.</p>
+<p>В AqSolDB все три пары признаков зависимы по проверке вероятностей.
+Самая сильная по модулю корреляция наблюдается между LogS и MolLogP:
+более липофильные соединения в этой базе обычно имеют меньшую
+растворимость.</p>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<details class="code-cell"><summary>Сводная таблица результата</summary><pre><code class="language-python">out = pd.DataFrame({
+    &quot;Единица исходного признака&quot;: pd.Series(UNIT), &quot;Среднее базы&quot;: mu,
+    &quot;Медиана базы&quot;: data.median(), &quot;Дисперсия базы&quot;: var,
+    &quot;Отмечено по Тьюки&quot;: {c: eda_metrics[c][&quot;flagged&quot;] for c in FEATURES}, &quot;Асимметрия&quot;: {c: eda_metrics[c][&quot;skew&quot;] for c in FEATURES},
+    &quot;Эксцесс&quot;: {c: eda_metrics[c][&quot;excess&quot;] for c in FEATURES},
+})
+wr = mc[mc[&quot;Отбор&quot;].eq(methods[True])]
+for n in (min(sizes), N):
+    for key, title in ((&quot;mean_rmse&quot;, &quot;RMSE среднего / σ&quot;), (&quot;var_rmse&quot;, &quot;RMSE дисперсии / σ²&quot;)):
+        out[f&quot;{title}, n={n}&quot;] = wr[wr[&quot;n&quot;].eq(n)].set_index(&quot;Признак&quot;)[key]
+display(out.round(4))
+print(&quot;Ошибка переписи без возвращения: ноль для среднего и дисперсии всех трёх признаков.&quot;)
+print(&quot;После поправки Бонферрони отвергнуто гипотез независимости:&quot;,
+      int((tests[&quot;p с поправкой&quot;] &lt;= alpha).sum()), &quot;из&quot;, len(pairs))</code></pre></details>
+<pre class="output">Ошибка переписи без возвращения: ноль для среднего и дисперсии всех трёх признаков.
+После поправки Бонферрони отвергнуто гипотез независимости: 3 из 3</pre>
+<div class="scroll" tabindex="0" role="region" aria-label="Сводная таблица результата"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Единица исходного признака</th>
+      <th>Среднее базы</th>
+      <th>Медиана базы</th>
+      <th>Дисперсия базы</th>
+      <th>Отмечено по Тьюки</th>
+      <th>Асимметрия</th>
+      <th>Эксцесс</th>
+      <th>RMSE среднего / σ, n=10</th>
+      <th>RMSE дисперсии / σ², n=10</th>
+      <th>RMSE среднего / σ, n=9982</th>
+      <th>RMSE дисперсии / σ², n=9982</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>LogS</th>
+      <td>безразм.</td>
+      <td>-2.8899</td>
+      <td>-2.6182</td>
+      <td>5.6076</td>
+      <td>82</td>
+      <td>-0.5516</td>
+      <td>-0.0600</td>
+      <td>0.3241</td>
+      <td>0.4490</td>
+      <td>0.0097</td>
+      <td>0.0134</td>
+    </tr>
+    <tr>
+      <th>MolWt</th>
+      <td>г/моль</td>
+      <td>266.6659</td>
+      <td>228.6820</td>
+      <td>33918.5144</td>
+      <td>488</td>
+      <td>5.4938</td>
+      <td>80.9231</td>
+      <td>0.3036</td>
+      <td>2.2749</td>
+      <td>0.0110</td>
+      <td>0.1061</td>
+    </tr>
+    <tr>
+      <th>MolLogP</th>
+      <td>безразм.</td>
+      <td>1.9792</td>
+      <td>1.9492</td>
+      <td>12.3732</td>
+      <td>701</td>
+      <td>0.7182</td>
+      <td>29.5092</td>
+      <td>0.3089</td>
+      <td>1.3572</td>
+      <td>0.0104</td>
+      <td>0.0593</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<p><a id="lab01-cat_mark_table" name="lab01-cat_mark_table"></a></p>
+<h3 id="критерии-оценивания-по-спринту-1">1.6 Критерии оценивания по
+спринту 1</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 23%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">cat_id</th>
+<th style="text-align: left;">notebook_link</th>
+<th style="text-align: center;">coeff</th>
+<th style="text-align: left;">comment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><a href="#lab01-data">Выбор
+датасета</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Выбор датасета для дальнейшей работы.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><a href="#lab01-logs">Химическая
+интерпретация LogS</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Понимание водной растворимости и
+физического смысла логарифмической шкалы.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><a href="#lab01-molwt">Химическая
+интерпретация MolWt</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Понимание молярной массы и её связи с
+молекулярным составом.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><a href="#lab01-logp">Химическая
+интерпретация MolLogP</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Понимание липофильности и коэффициента
+распределения октанол–вода.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;"><a href="#lab01-methods">Обоснование
+выбора случайных величин</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Объяснение стохастической природы
+признаков через случайный выбор химического соединения.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;"><a href="#lab01-data">Корректность
+обработки химических данных</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Проверка дубликатов, InChIKey, пропусков и
+допустимых значений химических дескрипторов.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">7</td>
+<td style="text-align: left;"><a href="#lab01-hypotheses">Интерпретация
+химических закономерностей</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Объяснение обнаруженных связей между
+растворимостью, молярной массой и липофильностью.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">8</td>
+<td style="text-align: left;"><a href="#lab01-resume">Выводы по спринту
+1</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Вывод по проделанной в спринте 1
+работе.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="lab02-sprint" name="lab02-sprint"></a></p>
+<h1 id="спринт-2">Спринт 2</h1>
+<p><a href="#lab01-toc">К оглавлению</a> · <a href="#lab01-resume">К
+итогам первого спринта</a></p>
+<p><a id="lab02-generator" name="lab02-generator"></a></p>
+<h2 id="генераторы-logs">2.1 Генераторы LogS</h2>
+<p><a id="lab02-desc" name="lab02-desc"></a></p>
+<h3 id="описание-3">2.1.1 Описание</h3>
+<p>Из исходного второго спринта переносим два способа генерации LogS.
+Первый выбирает наблюдавшиеся значения по обратной эмпирической функции
+распределения. Второй строит квантильную функцию с линейной
+интерполяцией. Оба используют форму исходных данных, которая отклоняется
+от нормальной.</p>
+<p>Для сравнения один раз перемешиваем очищенные строки AqSolDB и делим
+их на обучающую часть (80% с округлением вниз) и отложенную часть
+(остаток). Оба генератора обучаются на одних строках и проверяются на
+одной и той же отложенной части. Объём каждой синтетической выборки
+равен объёму отложенной части. Разные соединения в обеих частях могут
+иметь одинаковое значение LogS.</p>
+<p><a id="lab02-math" name="lab02-math"></a></p>
+<h3 id="метод-и-обоснование">2.1.2 Метод и обоснование</h3>
+<p>Пусть
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+обозначает число обучающих строк, а
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>≤</mo><mi>⋯</mi><mo>≤</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>m</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub></mrow><annotation encoding="application/x-tex">x_{(1)}\le \cdots \le x_{(m)}</annotation></semantics></math>
+их значения LogS после сортировки. Эмпирическая функция распределения
+ступенчатая:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mover><mi>F</mi><mo accent="true">̂</mo></mover><mi>m</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>m</mi></mfrac><munderover><mo>∑</mo><mrow><mi>i</mi><mo>=</mo><mn>1</mn></mrow><mi>m</mi></munderover><mn>𝟏</mn><mo stretchy="false" form="prefix">{</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>i</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>≤</mo><mi>t</mi><mo stretchy="false" form="postfix">}</mo><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\widehat F_m(t)=\frac{1}{m}\sum_{i=1}^{m}\mathbf{1}\{x_{(i)}\le t\}.
+</annotation></semantics></math></p>
+<p>Для каждого нового числа берём
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>∼</mo><mo>Unif</mo><mo stretchy="false" form="prefix">[</mo><mn>0</mn><mo>,</mo><mn>1</mn><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">U\sim\operatorname{Unif}[0,1)</annotation></semantics></math>,
+вычисляем номер
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>J</mi><annotation encoding="application/x-tex">J</annotation></semantics></math>
+и возвращаем соответствующее значение:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>J</mi><mo>=</mo><mo stretchy="false" form="prefix">⌊</mo><mi>m</mi><mi>U</mi><mo stretchy="false" form="postfix">⌋</mo><mo>+</mo><mn>1</mn><mo>,</mo><mspace width="2.0em"></mspace><mi>Y</mi><mo>=</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>J</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mi>.</mi></mrow><annotation encoding="application/x-tex">
+J=\lfloor mU\rfloor+1,\qquad Y=x_{(J)}.
+</annotation></semantics></math></p>
+<p>Зачем здесь умножение на
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>?
+Оно разбивает единичный интервал на
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>m</mi><annotation encoding="application/x-tex">m</annotation></semantics></math>
+интервалов равной вероятности. Например, если в обучении четыре строки,
+то
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>U</mi><mo>=</mo><mn>0.62</mn></mrow><annotation encoding="application/x-tex">U=0.62</annotation></semantics></math>
+попадает в третий интервал, поэтому возвращается третье значение после
+сортировки. В общем случае</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>J</mi><mo>=</mo><mi>j</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mo>Pr</mo><mspace width="-0.167em"></mspace><mrow><mo stretchy="true" form="prefix">(</mo><mfrac><mrow><mi>j</mi><mo>−</mo><mn>1</mn></mrow><mi>m</mi></mfrac><mo>≤</mo><mi>U</mi><mo>&lt;</mo><mfrac><mi>j</mi><mi>m</mi></mfrac><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><mfrac><mn>1</mn><mi>m</mi></mfrac><mo>,</mo><mspace width="2.0em"></mspace><mi>j</mi><mo>=</mo><mn>1</mn><mo>,</mo><mi>…</mi><mo>,</mo><mi>m</mi><mi>.</mi></mrow><annotation encoding="application/x-tex">
+\Pr(J=j)=\Pr\!\left(\frac{j-1}{m}\le U&lt;\frac{j}{m}\right)=\frac1m,
+\qquad j=1,\ldots,m.
+</annotation></semantics></math></p>
+<p>Суммируя эти вероятности по всем позициям, где
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>j</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>≤</mo><mi>t</mi></mrow><annotation encoding="application/x-tex">x_{(j)}\le t</annotation></semantics></math>,
+получаем
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>Pr</mo><mrow><mo stretchy="true" form="prefix">(</mo><mi>Y</mi><mo>≤</mo><mi>t</mi><mo>∣</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>,</mo><mi>…</mi><mo>,</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>m</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><msub><mover><mi>F</mi><mo accent="true">̂</mo></mover><mi>m</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow></mrow><annotation encoding="application/x-tex">\Pr(Y\le t\mid x_{(1)},\ldots,x_{(m)})=\widehat F_m(t)</annotation></semantics></math>.
+У ступенчатой функции нет обычной обратной, поэтому используем выбор по
+квантильным интервалам (<a
+href="https://link.springer.com/chapter/10.1007/978-1-4613-8643-8_2">принцип
+инверсии в книге Л. Девруа</a>). Реализация использует интервалы,
+замкнутые слева; это может менять выбор на границах относительно
+определения обобщённого квантиля через
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mo>inf</mo><mo stretchy="false" form="prefix">{</mo><mi>t</mi><mo>:</mo><msub><mover><mi>F</mi><mo accent="true">̂</mo></mover><mi>m</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>≥</mo><mi>u</mi><mo stretchy="false" form="postfix">}</mo></mrow><annotation encoding="application/x-tex">\inf\{t:\widehat F_m(t)\ge u\}</annotation></semantics></math>,
+но границы имеют нулевую вероятность в непрерывной математической
+модели. В Python индекс начинается с нуля, поэтому добавлять единицу не
+нужно.</p>
+<p>Для первого метода это <strong>равномерный выбор строки</strong>, а
+не равномерный выбор среди различных значений LogS. Если одно и то же
+число встречается в трёх строках, оно получает три интервала. Равенство
+доказано для обучающего распределения; совпадение с отложенной частью
+надо измерять отдельно. Дискретный метод возвращает только значения из
+обучающего набора.</p>
+<p><strong>Квантильный генератор с интерполяцией.</strong> Для тех же
+упорядоченных значений задаём узлы (p_j=(j-1)/(m-1)), когда (mge 2). При
+(Uin[p_j,p_{j+1})) возвращаем</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>Y</mi><mo>=</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>j</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>+</mo><mfrac><mrow><mi>U</mi><mo>−</mo><msub><mi>p</mi><mi>j</mi></msub></mrow><mrow><msub><mi>p</mi><mrow><mi>j</mi><mo>+</mo><mn>1</mn></mrow></msub><mo>−</mo><msub><mi>p</mi><mi>j</mi></msub></mrow></mfrac><mrow><mo stretchy="true" form="prefix">(</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>j</mi><mo>+</mo><mn>1</mn><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo>−</mo><msub><mi>x</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>j</mi><mo stretchy="true" form="postfix">)</mo></mrow></msub><mo stretchy="true" form="postfix">)</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+Y=x_{(j)}+\frac{U-p_j}{p_{j+1}-p_j}\left(x_{(j+1)}-x_{(j)}\right).
+</annotation></semantics></math></p>
+<p>Если соседние значения совпадают, весь интервал даёт одно значение.
+Если они различаются, генератор может вернуть промежуточный LogS.
+Результаты остаются между минимумом и максимумом обучения. При (m=1)
+всегда возвращаем единственное значение. Интерполяция задаёт сглаженную
+квантильную функцию и меняет закон по сравнению со ступенчатым
+эмпирическим распределением.</p>
+<p><a id="lab02-code" name="lab02-code"></a></p>
+<h3 id="реализация">2.1.3 Реализация</h3>
+<p>Оба алгоритма включены в ноутбук. Дискретный метод выбирает индекс
+через округление вниз, интерполяционный использует
+<code>np.interp</code> на равномерной сетке вероятностей. Используем
+одинаковые равномерные числа для обоих методов, чтобы сравнить
+преобразования на одних входах. Для повторного запуска используйте
+«Restart Kernel and Run All Cells»: первый спринт загружает и проверяет
+исходный CSV. Если сеть недоступна, положите рядом с ноутбуком <a
+href="https://raw.githubusercontent.com/mcsorkun/AqSolDB/98cdd10a372058743e4f3fb950a1c9974ec9603a/results/data_curated.csv">зафиксированный
+CSV</a> с именем <code>data_curated.csv</code>.</p>
+<p>Технические ячейки свёрнуты, но их можно раскрыть: в JupyterLab через
+переключатель слева от ячейки, в Colab через кнопку показа кода. Таблицы
+и рисунки остаются видимыми.</p>
+<details class="code-cell"><summary>Генератор LogS и отложенное разбиение</summary><pre><code class="language-python">def s2_generate(values, n, rng):
+    &quot;Выбор по обратной эмпирической функции распределения.&quot;
+    sorted_values = np.sort(values)
+    u = rng.random(n)
+    indices = np.floor(u * len(sorted_values)).astype(int)
+    return sorted_values[indices]
+
+
+def generate_logs_quantile(values, n, rng):
+    &quot;&quot;&quot;Линейная интерполяция между соседними порядковыми статистиками.&quot;&quot;&quot;
+    if n &lt;= 0:
+        raise ValueError(&quot;Размер генерации должен быть положительным.&quot;)
+    values = np.asarray(values, dtype=float)
+    sorted_values = np.sort(values[np.isfinite(values)])
+    if sorted_values.size == 0:
+        raise ValueError(&quot;В обучающем наборе нет конечных значений.&quot;)
+    grid = np.linspace(0, 1, sorted_values.size)
+    return np.interp(rng.random(n), grid, sorted_values)
+
+
+def s2_metrics(values):
+    q05, q25, q50, q75, q95 = np.quantile(values, [.05, .25, .5, .75, .95])
+    return {
+        &quot;Среднее&quot;: np.mean(values),
+        &quot;Стандартное отклонение&quot;: np.std(values, ddof=1),
+        &quot;Медиана&quot;: q50,
+        &quot;Первый квартиль&quot;: q25,
+        &quot;Третий квартиль&quot;: q75,
+        &quot;Межквартильный размах&quot;: q75 - q25,
+        &quot;Квантиль 5%&quot;: q05,
+        &quot;Квантиль 95%&quot;: q95,
+        &quot;Минимум&quot;: np.min(values),
+        &quot;Максимум&quot;: np.max(values),
+        &quot;Асимметрия&quot;: stats.skew(values, bias=True),
+        &quot;Эксцесс&quot;: stats.kurtosis(values, fisher=True, bias=True),
+    }
+
+
+s2_values = data[&quot;LogS&quot;].to_numpy(dtype=float)
+s2_rng = np.random.default_rng(SEED)
+s2_perm = s2_rng.permutation(len(s2_values))
+s2_cut = int(.8 * len(s2_values))
+s2_ix_train, s2_ix_test = s2_perm[:s2_cut], s2_perm[s2_cut:]
+s2_train, s2_test = s2_values[s2_ix_train], s2_values[s2_ix_test]
+from copy import deepcopy
+
+s2_interpolation_rng = deepcopy(s2_rng)
+s2_generated = s2_generate(s2_train, s2_test.size, s2_rng)
+s2_interpolated = generate_logs_quantile(s2_train, s2_test.size, s2_interpolation_rng)</code></pre></details>
+<p><a id="lab02-tests" name="lab02-tests"></a></p>
+<h3 id="автотесты">2.1.4 Автотесты</h3>
+<p>Проверяем размер результата и его принадлежность обучающему набору,
+воспроизводимость с одинаковым начальным состоянием, индексацию на
+границах и сохранение кратности повторов. Проверка среднего на большой
+генерации использует фиксированное начальное состояние и известную
+стандартную ошибку для выборки с возвращением; она не заменяет проверку
+на отложенных данных. Отдельные тесты проверяют разбиение, размер и
+диапазон интерполяционной выборки, её воспроизводимость и расчёт
+промежуточного квантиля.</p>
+<details class="code-cell" id="evidence-code"><summary>Автотесты генератора</summary><pre><code class="language-python">import io as s2_io
+import unittest as s2_unittest
+
+
+class Sprint2GeneratorTests(s2_unittest.TestCase):
+    def setUp(self):
+        self.values = np.random.default_rng(1).normal(-3, 1.5, 1000)
+
+    def test_size_and_support(self):
+        sample = s2_generate(self.values, 500, np.random.default_rng(2))
+        self.assertEqual(sample.shape, (500,))
+        self.assertTrue(np.isin(sample, self.values).all())
+
+    def test_seed(self):
+        a = s2_generate(self.values, 200, np.random.default_rng(42))
+        b = s2_generate(self.values, 200, np.random.default_rng(42))
+        np.testing.assert_array_equal(a, b)
+
+    def test_rank_boundaries_and_repeats(self):
+        class FixedUniform:
+            def random(self, n):
+                values = np.array([0., .25, .5, .75, np.nextafter(1., 0.)])
+                assert len(values) == n
+                return values
+
+        np.testing.assert_array_equal(
+            s2_generate([8., -2., 3., -2.], 5, FixedUniform()),
+            [-2., -2., 3., 8., 8.],
+        )
+
+    def test_mean(self):
+        n = 100_000
+        sample = s2_generate(self.values, n, np.random.default_rng(3))
+        standard_error = self.values.std(ddof=0) / np.sqrt(n)
+        self.assertLess(abs(sample.mean() - self.values.mean()), 6 * standard_error)
+
+    def test_split_and_output_size(self):
+        self.assertEqual(np.intersect1d(s2_ix_train, s2_ix_test).size, 0)
+        self.assertEqual(s2_ix_train.size, int(.8 * len(data)))
+        np.testing.assert_array_equal(np.sort(s2_perm), np.arange(len(data)))
+        self.assertEqual(s2_generated.size, s2_test.size)
+        self.assertTrue(np.isin(s2_generated, s2_train).all())
+
+
+    def test_interpolation_size_range_and_seed(self):
+        a = generate_logs_quantile(self.values, 200, np.random.default_rng(42))
+        b = generate_logs_quantile(self.values, 200, np.random.default_rng(42))
+        self.assertEqual(a.shape, (200,))
+        self.assertTrue(np.isfinite(a).all())
+        self.assertGreaterEqual(a.min(), self.values.min())
+        self.assertLessEqual(a.max(), self.values.max())
+        np.testing.assert_array_equal(a, b)
+
+    def test_interpolated_midpoint(self):
+        class FixedUniform:
+            def random(self, n):
+                return np.full(n, .5)
+
+        np.testing.assert_array_equal(
+            generate_logs_quantile([8., 0.], 1, FixedUniform()),
+            [4.],
+        )
+        np.testing.assert_array_equal(
+            generate_logs_quantile([8.], 1, FixedUniform()),
+            [8.],
+        )
+
+
+s2_log = s2_io.StringIO()
+s2_suite = s2_unittest.defaultTestLoader.loadTestsFromTestCase(Sprint2GeneratorTests)
+s2_result = s2_unittest.TextTestRunner(stream=s2_log, verbosity=2).run(s2_suite)
+print(s2_log.getvalue(), end=&quot;&quot;)
+assert s2_result.wasSuccessful()</code></pre></details>
+<pre class="output">test_interpolated_midpoint (__main__.Sprint2GeneratorTests.test_interpolated_midpoint) ... ok
+test_interpolation_size_range_and_seed (__main__.Sprint2GeneratorTests.test_interpolation_size_range_and_seed) ... ok
+test_mean (__main__.Sprint2GeneratorTests.test_mean) ... ok
+test_rank_boundaries_and_repeats (__main__.Sprint2GeneratorTests.test_rank_boundaries_and_repeats) ... ok
+test_seed (__main__.Sprint2GeneratorTests.test_seed) ... ok
+test_size_and_support (__main__.Sprint2GeneratorTests.test_size_and_support) ... ok
+test_split_and_output_size (__main__.Sprint2GeneratorTests.test_split_and_output_size) ... ok
+
+----------------------------------------------------------------------
+Ran 7 tests in 0.008s
+
+OK</pre>
+<p><a id="lab02-compare" name="lab02-compare"></a></p>
+<h3 id="проверка-на-aqsoldb">2.1.5 Проверка на AqSolDB</h3>
+<p>Сопоставляем центр, разброс, хвосты и форму. Для обоих методов
+считаем разность «генерация минус отложенная часть» и её модуль.
+Показатели выражены в безразмерной шкале LogS. Для стандартного
+отклонения используется делитель
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>n</mi><mo>−</mo><mn>1</mn></mrow><annotation encoding="application/x-tex">n-1</annotation></semantics></math>,
+где
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>n</mi><annotation encoding="application/x-tex">n</annotation></semantics></math>
+обозначает размер соответствующего набора. На рисунке у трёх гистограмм
+общие границы интервалов, рассчитанные по объединённым данным, и площадь
+каждой гистограммы равна единице.</p>
+<p>Максимальный вертикальный разрыв между эмпирическими функциями
+распределения измеряем статистикой Колмогорова–Смирнова:</p>
+<p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>D</mi><mrow><mo stretchy="true" form="prefix">(</mo><mi>A</mi><mo>,</mo><mi>B</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>=</mo><munder><mo>sup</mo><mi>t</mi></munder><mrow><mo stretchy="true" form="prefix">|</mo><msub><mover><mi>F</mi><mo accent="true">̂</mo></mover><mi>A</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo>−</mo><msub><mover><mi>F</mi><mo accent="true">̂</mo></mover><mi>B</mi></msub><mrow><mo stretchy="true" form="prefix">(</mo><mi>t</mi><mo stretchy="true" form="postfix">)</mo></mrow><mo stretchy="true" form="postfix">|</mo></mrow><mi>.</mi></mrow><annotation encoding="application/x-tex">
+D(A,B)=\sup_t\left|\widehat F_A(t)-\widehat F_B(t)\right|.
+</annotation></semantics></math></p>
+<p>Здесь
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>A</mi><annotation encoding="application/x-tex">A</annotation></semantics></math>
+обозначает отложенную часть, а
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>B</mi><annotation encoding="application/x-tex">B</annotation></semantics></math>
+либо синтетическую выборку, либо обучающую часть. Второе сравнение
+показывает, насколько отложенная часть отличается от самого закона
+генератора ещё до моделирования. Для повторяющихся значений сравниваем
+функции после полного скачка в каждой точке. Стандартное
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>p</mi><annotation encoding="application/x-tex">p</annotation></semantics></math>-значение
+из <code>ks_2samp</code> не используем: его калибровка предполагает две
+независимые выборки из непрерывных распределений, а обученные на
+табличных данных модели могут давать совпадающие значения (<a
+href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html">документация
+SciPy</a>).</p>
+<p>Графики KDE показывают сглаженные плотности, а Q–Q-график сравнивает
+квантили от 1% до 99%. В исходном интерполяционном примере генератор
+обучался и оценивался на всей таблице. Метрики ниже получены на общей
+отложенной части.</p>
+<p>Дополнительно повторяем генерацию 300 раз для каждого метода при том
+же разбиении. Интервал от 5-го до 95-го процентиля показывает разброс
+<math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>D</mi><annotation encoding="application/x-tex">D</annotation></semantics></math>
+из-за повторных генераций, а не доверительный интервал для неизвестной
+совокупности соединений.</p>
+<details class="code-cell"><summary>Сравнение метрик и устойчивость по повторным генерациям</summary><pre><code class="language-python">def s2_gap(a, b):
+    &quot;Точный по опоре максимум разности двух правосторонних ЭФР.&quot;
+    a, b = np.sort(a), np.sort(b)
+    support = np.union1d(a, b)
+    fa = np.searchsorted(a, support, side=&quot;right&quot;) / a.size
+    fb = np.searchsorted(b, support, side=&quot;right&quot;) / b.size
+    return float(np.max(np.abs(fa - fb)))
+
+
+
+s2_methods = {
+    &quot;Дискретный&quot;: (s2_generate, s2_generated),
+    &quot;Интерполяционный&quot;: (generate_logs_quantile, s2_interpolated),
+}
+s2_table = pd.DataFrame({
+    &quot;Обучение&quot;: s2_metrics(s2_train),
+    &quot;Отложенная часть&quot;: s2_metrics(s2_test),
+    **{name: s2_metrics(values) for name, (_, values) in s2_methods.items()},
+})
+s2_differences = s2_table[list(s2_methods)].subtract(s2_table[&quot;Отложенная часть&quot;], axis=0)
+display(s2_table.rename_axis(&quot;Характеристика LogS&quot;).round(4))
+display(pd.concat({&quot;Разность&quot;: s2_differences, &quot;Модуль разности&quot;: s2_differences.abs()}, axis=1).round(4))
+
+s2_train_gap = s2_gap(s2_test, s2_train)
+s2_gap_rows = []
+for name, (generate, values) in s2_methods.items():
+    repeat_rng = np.random.default_rng(np.random.SeedSequence([SEED, 2, 1]))
+    distances = [s2_gap(s2_test, generate(s2_train, s2_test.size, repeat_rng))
+                 for _ in range(300)]
+    q05, median, q95 = np.quantile(distances, [.05, .5, .95])
+    s2_gap_rows.append({
+        &quot;Метод&quot;: name, &quot;D&quot;: s2_gap(s2_test, values),
+        &quot;5-й процентиль D&quot;: q05, &quot;Медиана D&quot;: median, &quot;95-й процентиль D&quot;: q95,
+    })
+s2_distances = pd.DataFrame(s2_gap_rows).set_index(&quot;Метод&quot;)
+print(f&quot;D между обучением и отложенной частью: {s2_train_gap:.4f}&quot;)
+display(s2_distances.round(4))
+print(f&quot;Размеры: обучение — {s2_train.size}, отложенная часть — {s2_test.size}, &quot;
+      f&quot;каждая генерация — {s2_test.size}.&quot;)</code></pre></details>
+<pre class="output">D между обучением и отложенной частью: 0.0166
+Размеры: обучение — 7985, отложенная часть — 1997, каждая генерация — 1997.</pre>
+<div class="scroll" tabindex="0" role="region" aria-label="Сравнение метрик и устойчивость по повторным генерациям"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>Обучение</th>
+      <th>Отложенная часть</th>
+      <th>Дискретный</th>
+      <th>Интерполяционный</th>
+    </tr>
+    <tr>
+      <th>Характеристика LogS</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Среднее</th>
+      <td>-2.8800</td>
+      <td>-2.9295</td>
+      <td>-2.8259</td>
+      <td>-2.8256</td>
+    </tr>
+    <tr>
+      <th>Стандартное отклонение</th>
+      <td>2.3682</td>
+      <td>2.3681</td>
+      <td>2.3679</td>
+      <td>2.3666</td>
+    </tr>
+    <tr>
+      <th>Медиана</th>
+      <td>-2.6177</td>
+      <td>-2.6198</td>
+      <td>-2.5937</td>
+      <td>-2.5937</td>
+    </tr>
+    <tr>
+      <th>Первый квартиль</th>
+      <td>-4.3063</td>
+      <td>-4.4101</td>
+      <td>-4.2367</td>
+      <td>-4.2366</td>
+    </tr>
+    <tr>
+      <th>Третий квартиль</th>
+      <td>-1.2005</td>
+      <td>-1.2700</td>
+      <td>-1.1709</td>
+      <td>-1.1711</td>
+    </tr>
+    <tr>
+      <th>Межквартильный размах</th>
+      <td>3.1058</td>
+      <td>3.1401</td>
+      <td>3.0658</td>
+      <td>3.0655</td>
+    </tr>
+    <tr>
+      <th>Квантиль 5%</th>
+      <td>-7.4253</td>
+      <td>-7.4325</td>
+      <td>-7.4898</td>
+      <td>-7.4879</td>
+    </tr>
+    <tr>
+      <th>Квантиль 95%</th>
+      <td>0.6548</td>
+      <td>0.5585</td>
+      <td>0.7331</td>
+      <td>0.7314</td>
+    </tr>
+    <tr>
+      <th>Минимум</th>
+      <td>-13.1719</td>
+      <td>-11.6000</td>
+      <td>-10.6600</td>
+      <td>-10.6169</td>
+    </tr>
+    <tr>
+      <th>Максимум</th>
+      <td>2.1377</td>
+      <td>1.7009</td>
+      <td>2.1377</td>
+      <td>2.1065</td>
+    </tr>
+    <tr>
+      <th>Асимметрия</th>
+      <td>-0.5511</td>
+      <td>-0.5538</td>
+      <td>-0.5358</td>
+      <td>-0.5344</td>
+    </tr>
+    <tr>
+      <th>Эксцесс</th>
+      <td>-0.0394</td>
+      <td>-0.1426</td>
+      <td>-0.0934</td>
+      <td>-0.0987</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Сравнение метрик и устойчивость по повторным генерациям"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr>
+      <th></th>
+      <th colspan="2" halign="left">Разность</th>
+      <th colspan="2" halign="left">Модуль разности</th>
+    </tr>
+    <tr>
+      <th></th>
+      <th>Дискретный</th>
+      <th>Интерполяционный</th>
+      <th>Дискретный</th>
+      <th>Интерполяционный</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Среднее</th>
+      <td>0.1036</td>
+      <td>0.1038</td>
+      <td>0.1036</td>
+      <td>0.1038</td>
+    </tr>
+    <tr>
+      <th>Стандартное отклонение</th>
+      <td>-0.0002</td>
+      <td>-0.0015</td>
+      <td>0.0002</td>
+      <td>0.0015</td>
+    </tr>
+    <tr>
+      <th>Медиана</th>
+      <td>0.0261</td>
+      <td>0.0261</td>
+      <td>0.0261</td>
+      <td>0.0261</td>
+    </tr>
+    <tr>
+      <th>Первый квартиль</th>
+      <td>0.1734</td>
+      <td>0.1735</td>
+      <td>0.1734</td>
+      <td>0.1735</td>
+    </tr>
+    <tr>
+      <th>Третий квартиль</th>
+      <td>0.0991</td>
+      <td>0.0989</td>
+      <td>0.0991</td>
+      <td>0.0989</td>
+    </tr>
+    <tr>
+      <th>Межквартильный размах</th>
+      <td>-0.0743</td>
+      <td>-0.0745</td>
+      <td>0.0743</td>
+      <td>0.0745</td>
+    </tr>
+    <tr>
+      <th>Квантиль 5%</th>
+      <td>-0.0573</td>
+      <td>-0.0554</td>
+      <td>0.0573</td>
+      <td>0.0554</td>
+    </tr>
+    <tr>
+      <th>Квантиль 95%</th>
+      <td>0.1746</td>
+      <td>0.1729</td>
+      <td>0.1746</td>
+      <td>0.1729</td>
+    </tr>
+    <tr>
+      <th>Минимум</th>
+      <td>0.9400</td>
+      <td>0.9831</td>
+      <td>0.9400</td>
+      <td>0.9831</td>
+    </tr>
+    <tr>
+      <th>Максимум</th>
+      <td>0.4368</td>
+      <td>0.4055</td>
+      <td>0.4368</td>
+      <td>0.4055</td>
+    </tr>
+    <tr>
+      <th>Асимметрия</th>
+      <td>0.0180</td>
+      <td>0.0194</td>
+      <td>0.0180</td>
+      <td>0.0194</td>
+    </tr>
+    <tr>
+      <th>Эксцесс</th>
+      <td>0.0493</td>
+      <td>0.0439</td>
+      <td>0.0493</td>
+      <td>0.0439</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<div class="scroll" tabindex="0" role="region" aria-label="Сравнение метрик и устойчивость по повторным генерациям"><div>
+
+<table class="dataframe">
+  <thead>
+    <tr style="text-align: right;">
+      <th></th>
+      <th>D</th>
+      <th>5-й процентиль D</th>
+      <th>Медиана D</th>
+      <th>95-й процентиль D</th>
+    </tr>
+    <tr>
+      <th>Метод</th>
+      <th></th>
+      <th></th>
+      <th></th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <th>Дискретный</th>
+      <td>0.0255</td>
+      <td>0.016</td>
+      <td>0.0245</td>
+      <td>0.0361</td>
+    </tr>
+    <tr>
+      <th>Интерполяционный</th>
+      <td>0.0255</td>
+      <td>0.016</td>
+      <td>0.0245</td>
+      <td>0.0361</td>
+    </tr>
+  </tbody>
+</table>
+</div></div>
+<details class="code-cell"><summary>Распределения LogS: общая сетка и эмпирические функции</summary><pre><code class="language-python">s2_pool = np.r_[s2_test, s2_generated, s2_interpolated]
+s2_edges = np.histogram_bin_edges(s2_pool, bins=&quot;fd&quot;)
+s2_pad = .04 * np.ptp(s2_pool)
+s2_lo, s2_hi = s2_pool.min() - s2_pad, s2_pool.max() + s2_pad
+fig_s2, ax_s2 = plt.subplots(1, 2, figsize=(11.3, 4.1), layout=&quot;constrained&quot;)
+fig_s2.suptitle(&quot;Рисунок 11. LogS · отложенная часть и генерация&quot;,
+               fontsize=14, fontweight=&quot;bold&quot;)
+
+for values_s2, label_s2, color_s2, style_s2 in (
+    (s2_test, &quot;Отложенная часть&quot;, BLUE, &quot;-&quot;),
+    (s2_generated, &quot;Дискретный&quot;, ORANGE, &quot;--&quot;),
+    (s2_interpolated, &quot;Интерполяционный&quot;, &quot;#427951&quot;, &quot;:&quot;),
+):
+    density_s2, _ = np.histogram(values_s2, bins=s2_edges, density=True)
+    np.testing.assert_allclose(np.dot(density_s2, np.diff(s2_edges)), 1)
+    ax_s2[0].stairs(density_s2, s2_edges, color=color_s2, lw=1.6,
+                    ls=style_s2, label=label_s2)
+    unique_s2, count_s2 = np.unique(values_s2, return_counts=True)
+    ax_s2[1].step(np.r_[s2_lo, unique_s2, s2_hi],
+                  np.r_[0., np.cumsum(count_s2) / values_s2.size, 1.],
+                  where=&quot;post&quot;, color=color_s2, lw=1.6, ls=style_s2, label=label_s2)
+
+ax_s2[0].set(title=&quot;Гистограмма · общие интервалы&quot;, ylabel=&quot;Плотность (безразм.)&quot;,
+             ylim=(0, None))
+ax_s2[1].set(title=&quot;Эмпирические функции распределения&quot;,
+             ylabel=r&quot;$\widehat{F}(t)$ (безразм.)&quot;, ylim=(-.035, 1.035))
+for axis_s2 in ax_s2:
+    axis_s2.set(xlabel=LABEL[&quot;LogS&quot;], xlim=(s2_lo, s2_hi))
+    axis_s2.legend(loc=&quot;upper left&quot;)
+show(fig_s2)</code></pre></details>
+
+<div class="study-card generator-explorer" id="evidence-generators">
+    <div class="chart-switch" role="group" aria-label="Показанные генераторы" hidden><button type="button" aria-pressed="true" aria-controls="evidence-generators-result" data-generator-mode="both">Оба метода</button><button type="button" aria-pressed="false" aria-controls="evidence-generators-result" data-generator-mode="discrete">Дискретный</button><button type="button" aria-pressed="false" aria-controls="evidence-generators-result" data-generator-mode="interp">Интерполяционный</button></div>
+    <div id="evidence-generators-result">
+        <figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/generators-both.png" aria-label="Увеличить: Рисунок 11">
+        <img src="assets/generators-both.png" width="1638" height="594" loading="lazy" alt="Распределения LogS: общая сетка и эмпирические функции">
+    </a>
+    <figcaption><span>Рисунок 11</span>Распределения LogS: общая сетка и эмпирические функции</figcaption>
+</figure>
+        <div class="scroll metrics-table" role="region" tabindex="0" aria-label="Метрики генераторов">
+            <table><thead><tr><th scope="col">Метрика</th><th scope="col" data-series="holdout">Отложенная часть</th><th scope="col" data-series="discrete">Дискретный</th><th scope="col" data-series="interp">Интерполяционный</th></tr></thead>
+            <tbody><tr><th scope="row">Среднее</th><td data-series="holdout">−2,9295</td><td data-series="discrete">−2,8259</td><td data-series="interp">−2,8256</td></tr><tr><th scope="row">Медиана</th><td data-series="holdout">−2,6198</td><td data-series="discrete">−2,5937</td><td data-series="interp">−2,5937</td></tr><tr><th scope="row">Стандартное отклонение</th><td data-series="holdout">2,3681</td><td data-series="discrete">2,3679</td><td data-series="interp">2,3666</td></tr><tr><th scope="row">Квантиль 95%</th><td data-series="holdout">0,5585</td><td data-series="discrete">0,7331</td><td data-series="interp">0,7314</td></tr><tr><th scope="row">Расстояние D до отложенной части</th><td data-series="holdout">—</td><td data-series="discrete">0,0255</td><td data-series="interp">0,0255</td></tr></tbody></table>
+        </div>
+    </div>
+</div>
+<details class="code-cell"><summary>Сравнение плотностей KDE и квантилей</summary><pre><code class="language-python">fig, axes = plt.subplots(1, 2, figsize=(11.3, 4.3), layout=&quot;constrained&quot;)
+fig.suptitle(&quot;Рисунок 12. LogS · плотности и квантильное сравнение&quot;,
+             fontsize=14, fontweight=&quot;bold&quot;)
+grid = np.linspace(s2_lo, s2_hi, 400)
+quantile_levels = np.linspace(.01, .99, 99)
+test_quantiles = np.quantile(s2_test, quantile_levels)
+axes[0].plot(grid, stats.gaussian_kde(s2_test)(grid), color=BLUE, label=&quot;Отложенная часть&quot;)
+axes[1].plot([s2_lo, s2_hi], [s2_lo, s2_hi], ls=&quot;--&quot;, color=INK, label=&quot;Совпадение&quot;)
+for (name, (_, values)), color, marker in zip(s2_methods.items(), (ORANGE, &quot;#427951&quot;), (&quot;o&quot;, &quot;^&quot;)):
+    axes[0].plot(grid, stats.gaussian_kde(values)(grid), color=color, label=name)
+    axes[1].scatter(test_quantiles, np.quantile(values, quantile_levels), color=color,
+                    alpha=.65, marker=marker, s=14, label=name)
+axes[0].set(title=&quot;Сглаженные оценки плотности&quot;, xlabel=LABEL[&quot;LogS&quot;],
+            ylabel=&quot;Плотность (безразм.)&quot;, xlim=(s2_lo, s2_hi), ylim=(0, None))
+axes[1].set(title=&quot;Q–Q · квантили от 1% до 99%&quot;, xlabel=&quot;LogS · отложенная часть&quot;,
+            ylabel=&quot;LogS · генерация&quot;, xlim=(s2_lo, s2_hi), ylim=(s2_lo, s2_hi), aspect=&quot;equal&quot;)
+for axis in axes:
+    axis.legend(loc=&quot;upper left&quot;)
+show(fig)</code></pre></details>
+<figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-49-0.png" aria-label="Увеличить рисунок 12"><img loading="lazy" src="assets/plot-49-0.png" width="1315" height="552" alt="Сравнение плотностей KDE и квантилей"></a>
+    <figcaption><span>Рисунок 12</span>Сравнение плотностей KDE и квантилей</figcaption>
+</figure>
+<p><a id="lab02-findings" name="lab02-findings"></a></p>
+<h3 id="вывод-по-генераторам">2.1.6 Вывод по генераторам</h3>
+<p class="report-note">В зафиксированном запуске расстояние D до отложенных данных составило
+0,0255 для обоих генераторов. По 300 повторам у каждого метода медиана D
+составила 0,0245, а интервал между 5-м и 95-м процентилями — примерно
+0,0160–0,0361. По выбранной метрике заметного преимущества одного метода
+в этом эксперименте не видно.</p>
+<p>При этом среднее обеих генераций оказалось выше отложенного примерно
+на 0,104, а квантиль 95% — на 0,175 у дискретного метода и на 0,173 у
+интерполяционного. Стандартное отклонение в обоих случаях почти совпало
+с отложенным.</p>
+<p>Дискретный генератор воспроизводит закон обучающей части.
+Интерполяционный заполняет промежутки между соседними значениями и
+сохраняет её диапазон. Оба метода моделируют только LogS и не учитывают
+его связь с MolWt и MolLogP.</p>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<details class="code-cell"><summary>Численные итоги второго спринта</summary><pre><code class="language-python">for name in s2_methods:
+    delta = s2_differences[name]
+    distance = s2_distances.loc[name]
+    print(f&quot;{name}: Δ среднего = {delta[&#x27;Среднее&#x27;]:+.4f}, &quot;
+          f&quot;Δ станд. отклонения = {delta[&#x27;Стандартное отклонение&#x27;]:+.4f}, &quot;
+          f&quot;Δ квантиля 95% = {delta[&#x27;Квантиль 95%&#x27;]:+.4f}.&quot;)
+    print(f&quot;D = {distance[&#x27;D&#x27;]:.4f}, 5–95-й процентили повторов: &quot;
+          f&quot;{distance[&#x27;5-й процентиль D&#x27;]:.4f}–{distance[&#x27;95-й процентиль D&#x27;]:.4f}.&quot;)</code></pre></details>
+<pre class="output">Дискретный: Δ среднего = +0.1036, Δ станд. отклонения = -0.0002, Δ квантиля 95% = +0.1746.
+D = 0.0255, 5–95-й процентили повторов: 0.0160–0.0361.
+Интерполяционный: Δ среднего = +0.1038, Δ станд. отклонения = -0.0015, Δ квантиля 95% = +0.1729.
+D = 0.0255, 5–95-й процентили повторов: 0.0160–0.0361.</pre>
+<p><a id="lab02-resume" name="lab02-resume"></a></p>
+<h2 id="выводы-по-спринту-2">2.2 Выводы по спринту 2</h2>
+<p>Последовательность работы вышла следующая: перенесли оба алгоритма из
+исходного ноутбука, проверили их автотестами и сравнили на общем
+разбиении AqSolDB. В конце добавили повторные генерации, чтобы вывод не
+зависел только от одной реализации.</p>
+<p>Последняя ячейка этого раздела собирает в ZIP исходную и обработанную
+таблицы, метрики, графики и результаты генерации. Архив можно скачать из
+списка файлов Colab.</p>
+<details class="code-cell"><summary>Экспорт таблиц, графиков и генераций</summary><pre><code class="language-python">import json
+from zipfile import ZIP_DEFLATED, ZipFile
+
+scaled = clean_rows.copy()
+parameters = {}
+for feature in FEATURES:
+    x = data[feature]
+    scaled[f&quot;{feature}_z&quot;] = (x - mu[feature]) / sd[feature]
+    scaled[f&quot;{feature}_minmax&quot;] = (x - x.min()) / (x.max() - x.min())
+    parameters[feature] = {
+        &quot;mean&quot;: float(mu[feature]), &quot;std_ddof0&quot;: float(sd[feature]),
+        &quot;min&quot;: float(x.min()), &quot;max&quot;: float(x.max()),
+    }
+scaled[&quot;MolWt_log10&quot;] = np.log10(data[&quot;MolWt&quot;])
+
+population_statistics = data.describe().T.assign(
+    variance=var, skewness=data.apply(stats.skew), excess=data.apply(stats.kurtosis),
+)
+population_statistics[&quot;std&quot;] = sd
+paths = {
+    &quot;aqsoldb_clean.csv&quot;: (clean_rows, False),
+    &quot;aqsoldb_scaled.csv&quot;: (scaled, False),
+    &quot;population_statistics.csv&quot;: (population_statistics, True),
+    &quot;iqr_flags.csv&quot;: (pd.DataFrame(eda_metrics).T[[&quot;lower&quot;, &quot;upper&quot;, &quot;flagged&quot;, &quot;flagged_pct&quot;]], True),
+    &quot;sample_with.csv&quot;: (sample_frames[True], False),
+    &quot;sample_without.csv&quot;: (sample_frames[False], False),
+    &quot;sample_comparison.csv&quot;: (samples, False),
+    &quot;convergence.csv&quot;: (mc, False),
+    &quot;mollogp_single_samples.csv&quot;: (logp_example_table, False),
+    &quot;correlation_pearson.csv&quot;: (corr_matrices[&quot;Пирсона&quot;], True),
+    &quot;correlation_spearman.csv&quot;: (corr_matrices[&quot;Спирмена&quot;], True),
+    &quot;independence.csv&quot;: (dependence, True),
+    &quot;permutation_tests.csv&quot;: (tests, True),
+    &quot;sprint2/generated.csv&quot;: (pd.DataFrame({&quot;LogS&quot;: s2_generated, &quot;LogS_interpolated&quot;: s2_interpolated}), False),
+    &quot;sprint2/metrics.csv&quot;: (s2_table, True),
+    &quot;sprint2/metrics_diff.csv&quot;: (s2_differences, True),
+    &quot;sprint2/distances.csv&quot;: (s2_distances, True),
+}
+
+conclusions_text = &#x27;LogS имеет левый хвост, MolWt — выраженный правый хвост, а у MolLogP встречаются редкие крайние значения. Поэтому форму распределений оцениваем вместе со средним, разбросом, асимметрией и эксцессом.\n\nС ростом объёма выборки среднеквадратичная ошибка оценок в целом снижается. Абсолютная ошибка отдельной случайной выборки может колебаться. При отборе всех строк без возвращения среднее и дисперсия совпадают с показателями базы.\n\nВ AqSolDB все три пары признаков зависимы по проверке вероятностей. Самая сильная по модулю корреляция наблюдается между LogS и MolLogP: более липофильные соединения в этой базе обычно имеют меньшую растворимость.\n\nВ зафиксированном запуске расстояние D до отложенных данных составило 0,0255 для обоих генераторов. По 300 повторам у каждого метода медиана D составила 0,0245, а интервал между 5-м и 95-м процентилями — примерно 0,0160–0,0361. По выбранной метрике заметного преимущества одного метода в этом эксперименте не видно.\n\nПри этом среднее обеих генераций оказалось выше отложенного примерно на 0,104, а квантиль 95% — на 0,175 у дискретного метода и на 0,173 у интерполяционного. Стандартное отклонение в обоих случаях почти совпало с отложенным.\n\nДискретный генератор воспроизводит закон обучающей части. Интерполяционный заполняет промежутки между соседними значениями и сохраняет её диапазон. Оба метода моделируют только LogS и не учитывают его связь с MolWt и MolLogP.&#x27;
+archive = Path(&quot;Lab01_AqSolDB_results.zip&quot;)
+with ZipFile(archive, &quot;w&quot;, compression=ZIP_DEFLATED) as bundle:
+    bundle.writestr(&quot;aqsoldb_raw.csv&quot;, payload)
+    bundle.writestr(&quot;source.json&quot;, json.dumps({&quot;url&quot;: URL, &quot;sha256&quot;: EXPECTED_SHA, &quot;seed&quot;: SEED}, indent=2))
+    bundle.writestr(&quot;scaling_parameters.json&quot;, json.dumps(parameters, indent=2))
+    for name, (table, index) in paths.items():
+        bundle.writestr(name, table.to_csv(index=index))
+    bundle.writestr(&quot;conclusions.md&quot;, conclusions_text)
+    for name, png in saved_figures.items():
+        bundle.writestr(f&quot;figures/{name}&quot;, png)
+print(f&quot;Архив результатов: {archive.name}&quot;)</code></pre></details>
+<pre class="output">Архив результатов: Lab01_AqSolDB_results.zip</pre>
+<p><a id="lab02-refs" name="lab02-refs"></a></p>
+<h3 id="литература">2.2.1 Литература</h3>
+<ul>
+<li><strong>Devroye, L. (1986).</strong> Non-Uniform Random Variate
+Generation, гл. II, §2.1, «The inversion principle», и гл. III, §2, «The
+inversion method». <a
+href="https://link.springer.com/chapter/10.1007/978-1-4613-8643-8_2">Глава
+в SpringerLink</a> · <a
+href="https://luc.devroye.org/rnbookindex.html">Оглавление и сканы на
+сайте автора</a>.</li>
+<li><strong>Sorkun, M. C., Khetan, A., Er, S. (2019).</strong> AqSolDB,
+a curated reference set of aqueous solubility and 2D descriptors for a
+diverse set of compounds. <a
+href="https://www.nature.com/articles/s41597-019-0151-1">Scientific Data
+6, 143</a>.</li>
+<li><strong>SciPy.</strong> <a
+href="https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.ks_2samp.html">Документация
+<code>scipy.stats.ks_2samp</code></a>: определение статистики и
+предпосылки стандартного теста.</li>
+</ul>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="lab02-cat_mark_table" name="lab02-cat_mark_table"></a></p>
+<h3 id="критерии-оценивания-по-спринту-2">2.2.2 Критерии оценивания по
+спринту 2</h3>
+<table>
+<colgroup>
+<col style="width: 23%" />
+<col style="width: 23%" />
+<col style="width: 29%" />
+<col style="width: 23%" />
+</colgroup>
+<thead>
+<tr class="header">
+<th style="text-align: left;">cat_id</th>
+<th style="text-align: left;">notebook_link</th>
+<th style="text-align: center;">coeff</th>
+<th style="text-align: left;">comment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><a href="#lab02-math">Генератор и
+математическое обоснование</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Инверсия эмпирического закона и линейная
+интерполяция квантилей.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><a href="#lab02-tests">Автотесты</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Воспроизводимость, размер, диапазон,
+границы, среднее, разбиение и интерполяция.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><a href="#lab02-compare">Итоговые метрики
+и рисунок</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Сравнение на отложенной части; разброс
+статистики при повторных генерациях.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><a href="#lab02-refs">Литература</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Монография по генераторам, статья о данных
+и документация статистики.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;"><a href="#lab02-resume">Выводы по спринту
+2</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Вывод по проделанной в спринте 2
+работе.</td>
+</tr>
+</tbody>
+</table>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+<p><a id="lab01-criteria" name="lab01-criteria"></a></p>
+<h3 id="критерии-оценивания-для-ктвд">2.2.3 Критерии оценивания для
+КТвД</h3>
+<p>В таблице обозначены критерии оценивания для КТвД. Пожалуйста,
+выставите баллы, как считаете нужным :)</p>
+<div class="scroll criteria-table" role="region" tabindex="0" aria-label="Критерии КТвД">
+<table>
+
+<thead>
+<tr class="header">
+<th style="text-align: left;">cat_id</th>
+<th style="text-align: left;">notebook_link</th>
+<th style="text-align: center;">coeff</th>
+<th style="text-align: left;">comment</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td style="text-align: left;">1</td>
+<td style="text-align: left;"><a href="#lab01-data">Структура исследования</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Общие методы, три вложенных блока
+признаков, общая проверка и выводы.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">2</td>
+<td style="text-align: left;"><a href="#lab01-hypotheses">Индексы разделов</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Сквозная нумерация разделов и
+подразделов.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">3</td>
+<td style="text-align: left;"><a href="#оглавление">Навигация</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Оглавление, возврат к нему и переходы к
+общему анализу связей.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">4</td>
+<td style="text-align: left;"><a href="#evidence-code">Скрытие кода</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Технические ячейки свёрнуты, результаты и
+формулы видны.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">5</td>
+<td style="text-align: left;"><a href="#evidence-sample-scale">Масштабы и единицы</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Подписаны шкалы и единицы; нулевая ошибка
+не нанесена на логарифмическую ось.</td>
+</tr>
+<tr class="even">
+<td style="text-align: left;">6</td>
+<td style="text-align: left;"><a href="#evidence-pair-explorer">Оформление графиков</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Единый шрифт, палитра, нумерация и
+обозначения.</td>
+</tr>
+<tr class="odd">
+<td style="text-align: left;">7</td>
+<td style="text-align: left;"><a href="#evidence-formula">Формулы LaTeX</a></td>
+<td style="text-align: center;">–</td>
+<td style="text-align: left;">Единые обозначения вероятностей, моментов,
+выборочных оценок и критериев.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p><a href="#lab01-toc">К оглавлению</a></p>
+
+        <footer><a href="index.html">Обзор исследования</a><a href="AqSolDB-notebook.zip" download="AqSolDB-notebook.zip" data-notebook="AqSolDB.ipynb">Скачать ноутбук</a></footer>
+    </main>
+</div>
+    <script src="app.js" defer></script>
+</body>
+</html>

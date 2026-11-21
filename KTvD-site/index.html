@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AqSolDB · Атлас растворимости</title>
+<link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <header>
+        <nav><a href="#features">Признаки</a><a href="#generator">Генераторы</a><a href="report.html">Полный отчёт</a>
+        </nav>
+    </header>
+    <main>
+        <section class="hero">
+            <div><small>ПРИКЛАДНАЯ СТАТИСТИКА / ЛАБОРАТОРНАЯ № 1</small>
+                <h1>Атлас<br><i>растворимости</i></h1>
+                <p>Как растворимость связана с массой и липофильностью молекулы? Исследуем три свойства соединений из
+                    базы AqSolDB.</p>
+                <div class="hero-actions">
+                    <a class="btn" href="#features">Исследовать данные</a>
+                    <a class="btn btn-outline" href="AqSolDB-notebook.zip" download="AqSolDB-notebook.zip" data-notebook="AqSolDB.ipynb">Скачать ноутбук</a>
+                </div>
+            </div>
+            <aside><small>КОРРЕЛЯЦИЯ ПИРСОНА</small>
+                <h2>Связи признаков</h2>
+                <table class="matrix correlation-matrix" aria-label="Матрица корреляций Пирсона"><thead><tr><td></td><th scope="col">LogS</th><th scope="col">MolWt</th><th scope="col">MolLogP</th></tr></thead><tbody><tr><th scope="row">LogS</th><td><span class="matrix-value">1</span></td><td><a class="matrix-value neg" href="report.html#pair-logs-molwt" aria-label="LogS и MolWt. Пирсон −0,37. Открыть график">−0,37</a></td><td><a class="matrix-value low" href="report.html#pair-logs-mollogp" aria-label="LogS и MolLogP. Пирсон −0,61. Открыть график">−0,61</a></td></tr><tr><th scope="row">MolWt</th><td><a class="matrix-value neg" href="report.html#pair-logs-molwt" aria-label="MolWt и LogS. Пирсон −0,37. Открыть график">−0,37</a></td><td><span class="matrix-value">1</span></td><td><a class="matrix-value pos" href="report.html#pair-molwt-mollogp" aria-label="MolWt и MolLogP. Пирсон 0,27. Открыть график">0,27</a></td></tr><tr><th scope="row">MolLogP</th><td><a class="matrix-value low" href="report.html#pair-logs-mollogp" aria-label="MolLogP и LogS. Пирсон −0,61. Открыть график">−0,61</a></td><td><a class="matrix-value pos" href="report.html#pair-molwt-mollogp" aria-label="MolLogP и MolWt. Пирсон 0,27. Открыть график">0,27</a></td><td><span class="matrix-value">1</span></td></tr></tbody></table>
+                <p>Самая сильная линейная связь в базе — между LogS и MolLogP.</p>
+                <p class="matrix-hint">Выбери пару в матрице, чтобы открыть её график.</p>
+            </aside>
+        </section>
+        <div class="metrics">
+            <div><strong>9 982</strong>соединения в базе</div>
+            <div><strong>500</strong>строк в выборке для теста</div>
+            <div><strong>9 999</strong>перестановок для проверки</div>
+        </div>
+        <section id="features"><small>СПРИНТ 1</small>
+            <h2>Распределения признаков</h2>
+            <div class="tabs feature-tabs" role="group" aria-label="Признак"><button type="button" aria-pressed="true" aria-controls="panel0" data-id="0"><span>LogS</span><small>Растворимость в воде</small></button><button type="button" aria-pressed="false" aria-controls="panel1" data-id="1"><span>MolWt</span><small>Молярная масса</small></button><button type="button" aria-pressed="false" aria-controls="panel2" data-id="2"><span>MolLogP</span><small>Липофильность</small></button></div>
+            <article id="panel0">
+                <h3>Растворимость в воде</h3>
+                <p>LogS — десятичный логарифм численного значения растворимости в моль/л. Среднее −2,89 ниже медианы −2,62. Распределение
+                    вытянуто в сторону малорастворимых соединений.</p><figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-11-2.png" aria-label="Увеличить рисунок 1"><img loading="lazy" src="assets/plot-11-2.png" width="1427" height="927"
+                    alt="Распределение и диагностика LogS"></a>
+    <figcaption><span>Рисунок 1</span>Распределение и диагностика LogS</figcaption>
+</figure><a href="report.html#lab01-logs">Статистики и выборочные
+                    оценки</a>
+            </article>
+            <article id="panel1" hidden>
+                <h3>Молярная масса</h3>
+                <p>Средняя масса составляет 266,67 г/моль, медиана — 228,68 г/моль. Редкие тяжёлые молекулы образуют
+                    длинный правый хвост.</p><figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-17-2.png" aria-label="Увеличить рисунок 3"><img loading="lazy" src="assets/plot-17-2.png" width="1427" height="927"
+                    alt="Распределение и диагностика MolWt"></a>
+    <figcaption><span>Рисунок 3</span>Распределение и диагностика MolWt</figcaption>
+</figure><a href="report.html#lab01-molwt">Статистики и выборочные
+                    оценки</a>
+            </article>
+            <article id="panel2" hidden>
+                <h3>Липофильность</h3>
+                <p>MolLogP оценивает распределение вещества между октанолом и водой. Среднее 1,98 близко к медиане 1,95,
+                    при этом у распределения выраженные хвосты.</p><figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/plot-24-2.png" aria-label="Увеличить рисунок 6"><img loading="lazy" src="assets/plot-24-2.png" width="1427" height="927"
+                    alt="Распределение и диагностика MolLogP"></a>
+    <figcaption><span>Рисунок 6</span>Распределение и диагностика MolLogP</figcaption>
+</figure><a href="report.html#lab01-logp">Статистики и выборочные
+                    оценки</a>
+            </article>
+        </section>
+        <section id="generator"><small>СПРИНТ 2</small>
+            <h2>Генераторы LogS</h2>
+            <p>Первый метод выбирает наблюдавшиеся значения LogS. Второй вычисляет промежуточные значения с помощью линейной интерполяции квантилей. Оба сравниваем на одной отложенной выборке.</p>
+<div class="study-card generator-explorer" id="generator-preview">
+    <div class="chart-switch" role="group" aria-label="Показанные генераторы" hidden><button type="button" aria-pressed="true" aria-controls="generator-preview-result" data-generator-mode="both">Оба метода</button><button type="button" aria-pressed="false" aria-controls="generator-preview-result" data-generator-mode="discrete">Дискретный</button><button type="button" aria-pressed="false" aria-controls="generator-preview-result" data-generator-mode="interp">Интерполяционный</button></div>
+    <div id="generator-preview-result">
+        <figure class="atlas-figure">
+    <a class="figure-zoom" href="assets/generators-both.png" aria-label="Увеличить: Рисунок 11">
+        <img src="assets/generators-both.png" width="1638" height="594" loading="lazy" alt="Сопоставление распределений и эмпирических функций LogS">
+    </a>
+    <figcaption><span>Рисунок 11</span>Сопоставление распределений и эмпирических функций LogS</figcaption>
+</figure>
+        <div class="scroll metrics-table" role="region" tabindex="0" aria-label="Метрики генераторов">
+            <table><thead><tr><th scope="col">Метрика</th><th scope="col" data-series="holdout">Отложенная часть</th><th scope="col" data-series="discrete">Дискретный</th><th scope="col" data-series="interp">Интерполяционный</th></tr></thead>
+            <tbody><tr><th scope="row">Среднее</th><td data-series="holdout">−2,9295</td><td data-series="discrete">−2,8259</td><td data-series="interp">−2,8256</td></tr><tr><th scope="row">Медиана</th><td data-series="holdout">−2,6198</td><td data-series="discrete">−2,5937</td><td data-series="interp">−2,5937</td></tr><tr><th scope="row">Стандартное отклонение</th><td data-series="holdout">2,3681</td><td data-series="discrete">2,3679</td><td data-series="interp">2,3666</td></tr><tr><th scope="row">Квантиль 95%</th><td data-series="holdout">0,5585</td><td data-series="discrete">0,7331</td><td data-series="interp">0,7314</td></tr><tr><th scope="row">Расстояние D до отложенной части</th><td data-series="holdout">—</td><td data-series="discrete">0,0255</td><td data-series="interp">0,0255</td></tr></tbody></table>
+        </div>
+    </div>
+</div>
+            <p>Максимальное расхождение функций распределения с отложенной выборкой составило 0,0255 у дискретного генератора и 0,0255 у интерполяционного.</p><a href="report.html#lab02-generator">Методы, автотесты и результаты</a>
+        </section>
+        <footer><a href="report.html">Читать полный отчёт</a>
+        </footer>
+    </main>
+    <script src="app.js"></script>
+</body>
+
+</html>
